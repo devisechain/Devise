@@ -197,8 +197,8 @@ For more information, checkout our wiki_.
 
 .. _`Official Ethereum Wallet`: https://www.ethereum.org/
 
-.. _primer: https://github.com/pitaitechnologies/Devise/wiki/1.-Devise-Primer
+.. _primer: https://github.com/devisechain/Devise/wiki/1.-Devise-Primer
 
-.. _wiki: https://github.com/pitaitechnologies/Devise/wiki/1.-Devise-Primer
+.. _wiki: https://github.com/devisechain/Devise/wiki/1.-Devise-Primer
 
 .. _Official Repo: https://github.com/devisechain/devise
