@@ -1,0 +1,2 @@
+include devise/abi/*.json
+include deps/*.tgz

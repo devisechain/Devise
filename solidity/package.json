@@ -1,0 +1,40 @@
+{
+  "name": "devise",
+  "version": "1.0.0",
+  "description": "",
+  "main": "truffle-config.js",
+  "directories": {
+    "test": "test"
+  },
+  "eslintConfig": {
+    "root": true,
+    "env": {
+      "es6": true,
+      "node": true
+    },
+    "parserOptions": {
+      "ecmaVersion": 2017,
+      "sourceType": "module",
+      "ecmaFeatures": {
+        "jsx": true,
+        "experimentalObjectRestSpread": true
+      }
+    }
+  },
+  "scripts": {
+    "test": "truffle test"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "eslint": "^4.19.1",
+    "mocha-istanbul": "^0.3.0",
+    "mocha-junit-reporter": "^1.17.0",
+    "moment": "^2.22.1",
+    "openzeppelin-solidity": "git+https://git@github.com/OpenZeppelin/openzeppelin-solidity.git#746673a94f7e43835fcb5cb7b1af8ff1eea4e276",
+    "solhint": "^1.2.1",
+    "solidity-coverage": "^0.5.4",
+    "solium": "^1.1.6",
+    "truffle": "^4.1.11"
+  }
+}
