@@ -10,7 +10,13 @@ import "./DeviseRentalProxy.sol";
 contract DeviseTokenSale is AllowanceCrowdsale, IncreasingPriceInitialSale {
     using SafeMath for uint256;
     uint8 internal decimals;
-    DeviseRentalProxy rental;
+    DeviseRentalProxy public rental;
+    address internal owner;
+
+    modifier onlyOwner() {
+        if (msg.sender != owner) revert();
+        _;
+    }
 
     function DeviseTokenSale(address _wallet, uint256 _initialRate, uint256 _finalRate, uint256 _openingTime, uint256 _closingTime, DeviseToken _token) public
     AllowanceCrowdsale(_wallet)
@@ -19,9 +25,10 @@ contract DeviseTokenSale is AllowanceCrowdsale, IncreasingPriceInitialSale {
     Crowdsale(_initialRate, _wallet, _token) {
         decimals = _token.decimals();
         require(decimals <= 18);
+        owner = msg.sender;
     }
 
-    function setRentalProxy(DeviseRentalProxy _rental) public {
+    function setRentalProxy(DeviseRentalProxy _rental) public onlyOwner {
         rental = _rental;
     }
 

@@ -52,3 +52,14 @@ setup_python:
 	pip3 install .[dev]
 
 setup: setup_solidity setup_python
+
+deploy_pypi:
+	cp README.rst python/
+	cd python && python3 setup.py clean sdist upload
+	rm python/README.rst
+
+deploy_pypi_test:
+	cp README.rst python/
+	cd python && python3 setup.py clean sdist upload -r testpypi
+	rm python/README.rst
+

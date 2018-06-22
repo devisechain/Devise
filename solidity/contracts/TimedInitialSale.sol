@@ -18,7 +18,8 @@ contract TimedInitialSale is Crowdsale {
      */
     modifier onlyWhileOpen {
         // solium-disable-next-line security/no-block-members
-        require(block.timestamp >= openingTime && block.timestamp <= closingTime);
+        uint256 currentTimeStamp = getCurrentTimeStamp();
+        require(currentTimeStamp >= openingTime && currentTimeStamp <= closingTime);
         _;
     }
 
@@ -42,7 +43,8 @@ contract TimedInitialSale is Crowdsale {
      */
     function hasClosed() public view returns (bool) {
         // solium-disable-next-line security/no-block-members
-        return block.timestamp > closingTime;
+        uint256 currentTimeStamp = getCurrentTimeStamp();
+        return currentTimeStamp > closingTime;
     }
 
     /**
@@ -58,6 +60,10 @@ contract TimedInitialSale is Crowdsale {
     onlyWhileOpen
     {
         super._preValidatePurchase(_beneficiary, _weiAmount);
+    }
+
+    function getCurrentTimeStamp() internal view returns (uint256) {
+        return block.timestamp;
     }
 
 }

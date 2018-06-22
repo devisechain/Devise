@@ -80,16 +80,18 @@ def _create_account(passwd):
     return key_json, acct.address
 
 
-def _save_account_to_file(key_json):
+def _save_account_to_file(key_json, address):
     home = os.path.expanduser('~')
-    fpath = os.path.join(home, '.devise', 'keystore', 'account1.json')
+    fpath = os.path.join(home, '.devise', 'keystore', address.lower() + '.json')
     dirname = os.path.dirname(fpath)
     if not os.path.exists(dirname):
         os.makedirs(dirname)
-    obj = open(fpath, 'w')
-    obj.write(json.dumps(key_json))
-    obj.close()
-    os.chmod(fpath, 0o600)
+    if not os.path.exists(fpath):
+        obj = open(fpath, 'w')
+        obj.write(json.dumps(key_json))
+        obj.close()
+        os.chmod(fpath, 0o600)
+
     return fpath
 
 
@@ -99,9 +101,9 @@ def generate_account():
     :return: The path to a standard keystore file
     """
     passwd = getpass("Password to encrypt the new json keystore file:")
-    acct = _create_account(bytes(passwd, 'utf8'))
-    fpath = _save_account_to_file(acct[0])
-    return fpath, acct[1]
+    key_json, address = _create_account(bytes(passwd, 'utf8'))
+    fpath = _save_account_to_file(key_json, address)
+    return fpath, address
 
 
 class BaseEthereumClient(object):
@@ -255,16 +257,16 @@ class BaseEthereumClient(object):
     def _scan_for_keystore_file(self, account):
         """Find a matching encrypted keystore file in the known Ethereum Wallet locations"""
         path = self._ethereum_data_dir()
+        search_account = account if account[:2] != '0x' else account[2:]
         if path:
-            search_account = account if account[:2] != '0x' else account[2:]
             with Path(path) as p:
                 for file in p.glob("**/*--%s" % search_account.lower()):
                     self.logger.info("Found matching keystore file on disk: %s" % file)
                     return str(file)
-            with Path(os.path.join(os.path.expanduser('~'), '.devise', 'keystore')) as p:
-                for file in p.glob("**/*--%s" % search_account.lower()):
-                    self.logger.info("Found matching keystore file on disk: %s" % file)
-                    return str(file)
+        with Path(os.path.join(os.path.expanduser('~'), '.devise', 'keystore')) as p:
+            for file in p.glob("**/*%s*" % search_account.lower()):
+                self.logger.info("Found matching keystore file on disk: %s" % file)
+                return str(file)
 
     def _get_network_id(self):
         """Current Ethereum network id"""

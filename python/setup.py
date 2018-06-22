@@ -26,9 +26,11 @@ class install_all(_install):
 
 
 setup(name='devise',
+      maintainer='Devise Foundation',
       version='1.0',
-      license='BSD',
-      description='Official Python Package to Access the Devise Marketplace',
+      license='GPL-3',
+      description='Devise: An Ethereum Marketplace for Engineering Better Representations of Financial Markets',
+      url='https://github.com/devisechain/devise',
       long_description=readme,
       packages=find_packages(exclude=['tests']),
       include_package_data=True,
@@ -51,10 +53,11 @@ setup(name='devise',
           'Development Status :: 4 - Beta',
           'Environment :: Console',
           'Intended Audience :: Developers',
-          'License :: OSI Approved :: BSD License',
+          'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
           'Operating System :: OS Independent',
           'Programming Language :: Python',
           'Programming Language :: Python :: 3.5',
           'Programming Language :: Python :: 3.6',
-          'Topic :: Software Development :: Libraries'
+          'Topic :: Software Development :: Libraries',
+          'Topic :: Office/Business :: Financial :: Investment'
       ])

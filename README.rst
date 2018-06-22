@@ -2,13 +2,14 @@
 Devise: An Ethereum Marketplace for Engineering Better Representations of Financial Markets
 ###########################################################################################
 
-
-.. contents:: Table of Contents
-
-
 **Our smart contracts have not been deployed to the main Ethereum network yet, as they are currently undergoing a security audit. They will be deployed right after our security audit, at which point our Python package will be fully functional. Please regularly check this repo for an update.**
 
 Official Python 3 client to interact with the Devise marketplace. To learn more about Devise, checkout our primer_.
+
+
+
+.. contents:: Table of Contents
+
 
 
 Installation
@@ -38,7 +39,7 @@ We also provide a Docker image on Docker hub for your convenience:
 
 The corresponding Dockerfile can be found in this repo under the python directory.
 
-How To Create A Client 
+How To Create A Client
 ======================
 
 The repo connects to the Ethereum network either through a public Ethereum node.
@@ -49,7 +50,7 @@ For signing Ethereum transactions and requests to our cryptographic API, we supp
 
 All Devise-related operations can be performed through the :code:`DeviseClient` class.
 
-To use the `Official Ethereum Wallet`_, run 
+To use the `Official Ethereum Wallet`_, run
 
 .. code-block:: python
 
@@ -67,7 +68,7 @@ To use a hardware wallet, run
     devise_client = DeviseClient(account='0xd4a6B94E45B8c0185...', auth_type='[ledger|trezor]')
 
 
-To use a keystore file, run 
+To use a keystore file, run
 
 .. code-block:: python
 
@@ -76,7 +77,7 @@ To use a keystore file, run
     devise_client = DeviseClient(key_file='<path to your encrypted json keystore file>', password='<your password>')
 
 
-To use a clear private key, run 
+To use a clear private key, run
 
 .. code-block:: python
 
@@ -106,13 +107,13 @@ Here are a few ways of buying DVZ tokens in our initial sale:
     # Example 2: Buy 150 ethers worth of DVZ tokens
     status = devise_client.buy_eth_worth_of_tokens(150)
 
-    # Example 3: Buy 75,000 USD worth of DVZ tokens 
-    # The ETH/USD rate is retrieved from GDAX to infer the ETH equivalent of your 
+    # Example 3: Buy 75,000 USD worth of DVZ tokens
+    # The ETH/USD rate is retrieved from GDAX to infer the ETH equivalent of your
     # USD amount, which you need to have in your wallet as we only accept ETH.
     status = devise_client.buy_usd_worth_of_tokens(75000)
 
 
-To transfer 1,000,000 DVZ tokens from your wallet to your escrow account with us, run 
+To transfer 1,000,000 DVZ tokens from your wallet to your escrow account with us, run
 
 .. code-block:: python
 
@@ -133,7 +134,7 @@ If needed, you can request historical data to assess value-add:
 
 .. code-block:: python
 
-    # Request the right to access historical data. 
+    # Request the right to access historical data.
     # Note: Historical data are free of charge, but your escrow account
     # must be sufficiently provisioned to pay one month rent for this
     # request to be approved.
@@ -159,12 +160,12 @@ Once you know how many seats you want to bid for, and at what price, you can sub
 
     # Example: submit a bid for 10 seats on the devise blockchain, for a monthly rent capped at 200,000 DVZ.
     seats = 10
-    # Note: The limit monthly rent per seat below is indicative. 
+    # Note: The limit monthly rent per seat below is indicative.
     lmt_monthly_rent_per_seat = 200000
-    # The limit price the auction abides by is the limit price per bit of total incremental usefulness. 
+    # The limit price the auction abides by is the limit price per bit of total incremental usefulness.
     # If between terms leptons are added to the chain, the total incremental usefulness might change,
     # and as a result you might be paying a higher rent. Your rent per seat and per unit of total
-    # incremental usefulness will however never excess your specified limit price per bit. 
+    # incremental usefulness will however never excess your specified limit price per bit.
     lmt_price = lmt_monthly_rent_per_seat/devise_client.total_incremental_usefulness
     devise_client.lease_all(lmt_price, seats)
 

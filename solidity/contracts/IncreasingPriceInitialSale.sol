@@ -33,7 +33,8 @@ contract IncreasingPriceInitialSale is TimedInitialSale {
      */
     function getCurrentRate() public view returns (uint256) {
         // solium-disable-next-line security/no-block-members
-        uint256 elapsedTime = block.timestamp.sub(openingTime);
+        uint256 currentTimeStamp = getCurrentTimeStamp();
+        uint256 elapsedTime = currentTimeStamp.sub(openingTime);
         uint256 timeRange = closingTime.sub(openingTime);
         uint256 rateRange = initialRate.sub(finalRate);
         return initialRate.sub(elapsedTime.mul(rateRange).div(timeRange));

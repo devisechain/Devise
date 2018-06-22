@@ -23,6 +23,7 @@ import pytest
 import sha3
 from eth_account import Account
 from pytest import raises
+from web3 import Web3
 
 from devise import DeviseClient
 from devise.base import generate_account
@@ -375,12 +376,13 @@ class TestDeviseClient(object):
 
     @mock.patch('devise.base.getpass', return_value='password')
     def test_create_account(self, _):
-        home = os.path.expanduser('~')
-        dest = os.path.join(home, '.devise/keystore/account1.json')
-        if os.path.exists(dest):
-            os.remove(dest)
-        acct = generate_account()
-        assert acct[0] == dest
+        file_path, address = generate_account()
+        assert os.path.exists(file_path)
+        assert len(address) == 42
+        assert Web3.toChecksumAddress(address) == address
+        assert file_path.endswith(address.lower() + '.json')
+        client = DeviseClient(account=address)
+        assert client._scan_for_keystore_file(address) == file_path
 
     @mock.patch('devise.base.getpass', return_value='password')
     def test_create_beneficiary(self, _, client):
