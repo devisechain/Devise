@@ -1,4 +1,4 @@
-const DeviseTokenSale = artifacts.require("./DeviseTokenSale");
+const DeviseTokenSale = artifacts.require("./DeviseTokenSaleBase");
 const DeviseToken = artifacts.require("./DeviseToken");
 
 module.exports = function (deployer, network, accounts) {

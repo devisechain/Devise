@@ -1,12 +1,12 @@
 (function () {
     const DeviseToken = artifacts.require("./DeviseToken");
-    const DeviseTokenSale = artifacts.require("./DeviseTokenSale");
+    const DeviseTokenSale = artifacts.require("./DeviseTokenSaleBase");
     const DateTime = artifacts.require("./DateTime");
     const DeviseEternalStorage = artifacts.require("./DeviseEternalStorage");
     const DeviseRentalProxy = artifacts.require("./DeviseRentalProxy");
     const DeviseRentalImpl = artifacts.require("./DeviseRentalImpl");
     const assertRevert = require('./helpers/assertRevert');
-    const strategies = require('./strategies');
+    const leptons = require('./leptons');
 
     const pitai = web3.eth.accounts[0];
     const tokenWallet = web3.eth.accounts[1];
@@ -231,7 +231,7 @@
             assert.isTrue(status);
         });
 
-        it("The power user application should fail if the client has less than 1M tokens", async () => {
+        it("The power user application should fail if the client has less than 1 month's rent in tokens", async () => {
             const ether_amount = 10;
             await tokensale.sendTransaction({
                 from: client,
@@ -241,13 +241,15 @@
             const dvz_amount = (await token.balanceOf(client)).toNumber();
             assert.isBelow(dvz_amount, millionDVZ * microDVZ);
             await token.approve(rentalProxy.address, dvz_amount, {from: client});
-            await rentalProxy.provision(dvz_amount, {from: client});
+            await rentalProxy.addLepton(leptons[0], 1000000 * 10);
+            const powerUserMin = (await rentalProxy.getPowerUserMinimum()).toNumber();
+            await rentalProxy.provision(powerUserMin - 1, {from: client});
             await rentalProxy.applyForPowerUser({from: client});
             const status = await rentalProxy.isPowerUser.call({from: client});
             assert.isFalse(status);
         });
 
-        it("Power user status should not change simply because more strategies are added", async () => {
+        it("Power user status should not change simply because more leptons are added", async () => {
             const ether_amount = 70;
             await tokensale.sendTransaction({
                 from: client,
@@ -261,13 +263,13 @@
             await rentalProxy.applyForPowerUser({from: client});
             const status = await rentalProxy.isPowerUser.call({from: client});
             assert.isTrue(status);
-            // Pit.AI adds strategies to rental contract
-            await rentalProxy.addStrategy(strategies[0], 1000000 * (300));
-            await rentalProxy.addStrategy(strategies[1], 1000000 * (300));
-            await rentalProxy.addStrategy(strategies[2], 1000000 * (200));
-            await rentalProxy.addStrategy(strategies[3], 1000000 * (200));
-            await rentalProxy.addStrategy(strategies[4], 1000000 * (100));
-            await rentalProxy.addStrategy(strategies[5], 1000000 * (100));
+            // Pit.AI adds leptons to rental contract
+            await rentalProxy.addLepton(leptons[0], 1000000 * (300));
+            await rentalProxy.addLepton(leptons[1], 1000000 * (300));
+            await rentalProxy.addLepton(leptons[2], 1000000 * (200));
+            await rentalProxy.addLepton(leptons[3], 1000000 * (200));
+            await rentalProxy.addLepton(leptons[4], 1000000 * (100));
+            await rentalProxy.addLepton(leptons[5], 1000000 * (100));
             const pumin = (await rentalProxy.getPowerUserMinimum.call()).toNumber() / microDVZ;
             assert.isAbove(pumin, 10 ** 6);
             assert.isAbove(pumin, dvz_amount / microDVZ);
@@ -276,6 +278,7 @@
         });
 
         it("Power user application will fail when a client's tokens higher then init, but lower than updated", async () => {
+            await rentalProxy.setPowerUserClubFee(1, {from: pitai});
             const ether_amount = 70;
             await tokensale.sendTransaction({
                 from: client,
@@ -286,15 +289,11 @@
             assert.isAbove(dvz_amount, millionDVZ * microDVZ);
             await token.approve(rentalProxy.address, dvz_amount, {from: client});
             await rentalProxy.provision(dvz_amount, {from: client});
-            // Pit.AI adds strategies to rental contract
-            await rentalProxy.addStrategy(strategies[0], 1000000 * (300));
-            await rentalProxy.addStrategy(strategies[1], 1000000 * (300));
-            await rentalProxy.addStrategy(strategies[2], 1000000 * (200));
-            await rentalProxy.addStrategy(strategies[3], 1000000 * (200));
-            await rentalProxy.addStrategy(strategies[4], 1000000 * (100));
-            await rentalProxy.addStrategy(strategies[5], 1000000 * (100));
+            // add leptons to rental contract
+            await rentalProxy.addLepton(leptons[0], 1000000 * 500);
+            await rentalProxy.addLepton(leptons[1], 1000000 * 500);
+            await rentalProxy.addLepton(leptons[2], 1000000 * 500);
             const pumin = (await rentalProxy.getPowerUserMinimum.call()).toNumber() / microDVZ;
-            assert.isAbove(pumin, 10 ** 6);
             assert.isAbove(pumin, dvz_amount / microDVZ);
             await rentalProxy.applyForPowerUser({from: client});
             const status = await rentalProxy.isPowerUser.call({from: client});
@@ -332,10 +331,11 @@
             });
             const dvz_amount = (await token.balanceOf(client)).toNumber();
             await token.approve(rentalProxy.address, dvz_amount, {from: client});
-            await rentalProxy.provision(dvz_amount, {from: client});
-            const before = (await rentalProxy.getAllowance.call({from: client})).toNumber();
+
             const fee = 5 * microDVZ;
             await rentalProxy.setPowerUserClubFee(fee, {from: pitai});
+            await rentalProxy.provision(dvz_amount, {from: client});
+            const before = (await rentalProxy.getAllowance.call({from: client})).toNumber();
             await rentalProxy.applyForPowerUser({from: client});
             const status = await rentalProxy.isPowerUser.call({from: client});
             assert.isTrue(status);
@@ -374,10 +374,10 @@
             });
             const dvz_amount = (await token.balanceOf(client)).toNumber();
             await token.approve(rentalProxy.address, dvz_amount, {from: client});
-            await rentalProxy.provision(dvz_amount, {from: client});
-            const before = (await rentalProxy.getAllowance.call({from: client})).toNumber();
             const fee = 5 * microDVZ;
             await rentalProxy.setHistoricalDataFee(fee, {from: pitai});
+            await rentalProxy.provision(dvz_amount, {from: client});
+            const before = (await rentalProxy.getAllowance.call({from: client})).toNumber();
             await rentalProxy.requestHistoricalData({from: client});
             const status = await rentalProxy.getClientSummary.call(client);
             assert.isTrue(status[4]);

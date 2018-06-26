@@ -16,6 +16,7 @@ import hashlib
 import os
 import tempfile
 import uuid
+from math import floor
 from unittest import mock
 from unittest.mock import call, MagicMock
 
@@ -45,8 +46,8 @@ class TestDeviseClient(object):
 
         # sign a sample API request
         signed_url = client.get_signed_api_url(
-            '/v1/strategy/0055baf8939b9956dcae9175cbf0f5365cfd7348/weights')
-        msg = '/v1/strategy/0055baf8939b9956dcae9175cbf0f5365cfd7348/weights?address=' + client.address
+            '/v1/devisechain/0055baf8939b9956dcae9175cbf0f5365cfd7348/weights')
+        msg = '/v1/devisechain/0055baf8939b9956dcae9175cbf0f5365cfd7348/weights?address=' + client.address
 
         # Verify the signature is correct
         signature = signed_url.split('&signature=')[1]
@@ -142,7 +143,7 @@ class TestDeviseClient(object):
         client_local_keyfile.buy_eth_worth_of_tokens(ethers=.5)
         client_local_keyfile.provision(client_local_keyfile.dvz_balance)
         rate = client_local_keyfile._token_sale_contract.functions.getCurrentRate().call()
-        assert client_local_keyfile.dvz_balance_escrow == .5 * rate
+        assert floor(client_local_keyfile.dvz_balance_escrow) == floor(.5 * rate)
 
     def test_withdraw_can_withdraw(self, client):
         client.buy_eth_worth_of_tokens(ethers=.1)
@@ -192,7 +193,8 @@ class TestDeviseClient(object):
         client.designate_beneficiary('0xA1C2684B68A98c9636FC22F3B4E4332eF35A2408')
         assert client.beneficiary == '0xA1C2684B68A98c9636FC22F3B4E4332eF35A2408'
 
-    def test_is_power_user(self, client):
+    def test_is_power_user(self, client, owner_client):
+        owner_client.set_power_user_fee(1)
         client.buy_eth_worth_of_tokens(ethers=100)
         client.provision(client.dvz_balance)
         assert not client.is_power_user
@@ -207,20 +209,51 @@ class TestDeviseClient(object):
 
     def test_get_all_leptons(self, master_node, client):
         """Tests that we can query all leptons from the smart contract"""
-        strats = client.get_all_leptons()
-        new_strat = 'hello world %s' % (len(strats) + 1)
-        lepton_hash = hashlib.sha1(new_strat.encode('utf8')).hexdigest()
+        leptons = client.get_all_leptons()
+        new_lepton = 'hello world %s' % (len(leptons) + 1)
+        lepton_hash = hashlib.sha1(new_lepton.encode('utf8')).hexdigest()
         master_node.add_lepton(lepton_hash, 0.5123456789123456789)
 
-        new_strats = client.get_all_leptons()
-        assert len(new_strats) == len(strats) + 1
-        assert new_strats[-1] == {"hash": lepton_hash, "previous_hash": None, "incremental_usefulness": 0.512345}
+        new_leptons = client.get_all_leptons()
+        assert len(new_leptons) == len(leptons) + 1
+        assert new_leptons[-1] == {"hash": lepton_hash, "previous_hash": None, "incremental_usefulness": 0.512345}
 
-    def test_get_all_clients(self, client):
+    def test_get_all_renters(self, client):
         """Tests that we can query all current renter addresses from the smart contract"""
         client.buy_eth_worth_of_tokens(ethers=1)
         client.provision(client.dvz_balance)
         client.lease_all(10000, 10)
+        balance = client.dvz_balance_escrow
+        clients_list = client.get_all_renters()
+        assert clients_list[0] == {
+            'client': '0xA1C2684B68A98c9636FC22F3B4E4332eF35A2408',
+            'beneficiary': '0xA1C2684B68A98c9636FC22F3B4E4332eF35A2408',
+            'dvz_balance_escrow': balance,
+            'dvz_balance': 0.0,
+            'last_term_paid': client.current_lease_term,
+            'power_user': True,
+            'historical_data_access': True,
+            'current_term_seats': 10,
+            'indicative_next_term_seats': 10
+        }
+
+        client.designate_beneficiary("0xd4a6B94E45B8c0185e33F210f4F96bDAe40aa22E")
+        clients_list = client.get_all_renters()
+        assert clients_list[0] == {
+            'client': '0xA1C2684B68A98c9636FC22F3B4E4332eF35A2408',
+            'beneficiary': '0xd4a6B94E45B8c0185e33F210f4F96bDAe40aa22E',
+            'dvz_balance_escrow': balance,
+            'dvz_balance': 0.0,
+            'last_term_paid': client.current_lease_term,
+            'power_user': True,
+            'historical_data_access': True,
+            'current_term_seats': 10,
+            'indicative_next_term_seats': 10
+        }
+
+    def test_get_all_clients(self, client):
+        client.buy_eth_worth_of_tokens(ethers=100)
+        client.provision(client.dvz_balance)
         balance = client.dvz_balance_escrow
         clients_list = client.get_all_clients()
         assert clients_list[0] == {
@@ -228,11 +261,11 @@ class TestDeviseClient(object):
             'beneficiary': '0xA1C2684B68A98c9636FC22F3B4E4332eF35A2408',
             'dvz_balance_escrow': balance,
             'dvz_balance': 0.0,
-            'last_term_paid': client.current_lease_term,
-            'power_user': False,
-            'historical_data_access': False,
-            'current_term_seats': 10,
-            'indicative_next_term_seats': 10
+            'last_term_paid': None,
+            'power_user': True,
+            'historical_data_access': True,
+            'current_term_seats': 0,
+            'indicative_next_term_seats': 0
         }
 
         client.designate_beneficiary("0xd4a6B94E45B8c0185e33F210f4F96bDAe40aa22E")
@@ -242,15 +275,15 @@ class TestDeviseClient(object):
             'beneficiary': '0xd4a6B94E45B8c0185e33F210f4F96bDAe40aa22E',
             'dvz_balance_escrow': balance,
             'dvz_balance': 0.0,
-            'last_term_paid': client.current_lease_term,
-            'power_user': False,
-            'historical_data_access': False,
-            'current_term_seats': 10,
-            'indicative_next_term_seats': 10
+            'last_term_paid': None,
+            'power_user': True,
+            'historical_data_access': True,
+            'current_term_seats': 0,
+            'indicative_next_term_seats': 0
         }
 
     def test_rent_current_term(self, client, owner_client, master_node):
-        master_node.add_lepton(hashlib.sha1("some strat".encode('utf8')).hexdigest(), 1.5123456789123456789)
+        master_node.add_lepton(hashlib.sha1("some lepton".encode('utf8')).hexdigest(), 1.5123456789123456789)
         assert client.rent_per_seat_current_term == 1512.345000
         time_travel(86400 * 31, client)
         assert client.rent_per_seat_current_term > 0
@@ -259,12 +292,12 @@ class TestDeviseClient(object):
         assert client.price_per_bit_current_term == 1000
 
     def test_indicative_rent_next_term(self, client, master_node):
-        master_node.add_lepton(hashlib.sha1("some strat".encode('utf8')).hexdigest(), 1.5123456789123456789)
+        master_node.add_lepton(hashlib.sha1("some lepton".encode('utf8')).hexdigest(), 1.5123456789123456789)
         price_next_term = client.indicative_rent_per_seat_next_term
         assert price_next_term > 0
 
     def test_indicative_price_next_term(self, client, master_node):
-        master_node.add_lepton(hashlib.sha1("some strat".encode('utf8')).hexdigest(), 1.5123456789123456789)
+        master_node.add_lepton(hashlib.sha1("some lepton".encode('utf8')).hexdigest(), 1.5123456789123456789)
         assert client.indicative_price_per_bit_next_term == 1000
 
     @mock.patch("devise.clients.api.RentalAPI._download")
@@ -276,7 +309,7 @@ class TestDeviseClient(object):
             assert download_mock.call_count == 1
             url = download_mock.call_args[0][0]
             assert url.startswith(
-                'https://api.pit.ai/v1/strategy/latest_weights?address=%s&signature=' % client.address)
+                'https://api.pit.ai/v1/devisechain/latest_weights?address=%s&signature=' % client.address)
             assert file_name == 'devise_latest_weights_20180608.zip'
         finally:
             os.unlink(file_name)
@@ -288,7 +321,7 @@ class TestDeviseClient(object):
         url = download_mock.call_args[0][0]
         file_name = download_mock.call_args[0][1]
         assert url.startswith(
-            'https://api.pit.ai/v1/strategy/historical_weights?address=%s&signature=' % client.address)
+            'https://api.pit.ai/v1/devisechain/historical_weights?address=%s&signature=' % client.address)
         assert file_name == 'devise_historical_weights.tar'
 
     @mock.patch("devise.clients.api.RentalAPI._download")
@@ -298,7 +331,7 @@ class TestDeviseClient(object):
         url = download_mock.call_args[0][0]
         file_name = download_mock.call_args[0][1]
         assert url.startswith(
-            'https://api.pit.ai/v1/strategy/historical_returns?address=%s&signature=' % client.address)
+            'https://api.pit.ai/v1/devisechain/historical_returns?address=%s&signature=' % client.address)
         assert file_name == 'devise_historical_returns.tar'
 
     def test__download(self, client):

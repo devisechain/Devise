@@ -1,6 +1,6 @@
 (function () {
     const DeviseToken = artifacts.require("./DeviseToken");
-    const DeviseTokenSale = artifacts.require("./DeviseTokenSale");
+    const DeviseTokenSale = artifacts.require("./DeviseTokenSaleBase");
     const DateTime = artifacts.require("./DateTime");
     const DeviseEternalStorage = artifacts.require("./DeviseEternalStorage");
     const DeviseRentalProxy = artifacts.require("./DeviseRentalProxy");
@@ -73,5 +73,39 @@
             const allow = (await rentalProxy.getAllowance.call({from: client})).toNumber();
             assert.equal(allow, amtProvisioned);
         });
+
+
+        it("All provisioned clients are returned by getter", async () => {
+            const numClients = (await rentalProxy.getNumberOfClients.call()).toNumber();
+            assert.equal(numClients, 0);
+            const ether_amount = 1000;
+            // Provision one client
+            await tokensale.sendTransaction({
+                from: clients[0],
+                value: web3.toWei(ether_amount, "ether"),
+                gas: 1000000
+            });
+            const dvz_amount = (await token.balanceOf.call(clients[0])).toNumber();
+            await token.approve(rentalProxy.address, dvz_amount, {from: clients[0]});
+            const amtProvisioned = 1 * millionDVZ * microDVZ;
+            await rentalProxy.provision(amtProvisioned, {from: clients[0]});
+            const numClients1 = (await rentalProxy.getNumberOfClients.call()).toNumber();
+            assert.equal(numClients1, 1);
+            assert.equal(await rentalProxy.getClient.call(0), clients[0]);
+            // provision second client
+            await tokensale.sendTransaction({
+                from: clients[1],
+                value: web3.toWei(ether_amount, "ether"),
+                gas: 1000000
+            });
+            await token.approve(rentalProxy.address, dvz_amount, {from: clients[1]});
+            await rentalProxy.provision(amtProvisioned, {from: clients[1]});
+            const numClients2 = (await rentalProxy.getNumberOfClients.call()).toNumber();
+            assert.equal(numClients2, 2);
+            for (let i = 0; i < numClients2; i++) {
+                assert.equal(await rentalProxy.getClient.call(i), clients[i]);
+            }
+        });
+
     });
 })();

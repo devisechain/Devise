@@ -52,3 +52,18 @@ class TestTokenSale(object):
         assert status == True
         bal = self.token_client.balance_of(self.token_client.address)
         assert bal >= 0
+
+    def test_add_to_whitelist(self, token_sale_owner, client):
+        status = self.token_sale_client.is_on_whitelist(client.address)
+        assert status == False
+        token_sale_owner.add_to_whitelist(client.address)
+        status = self.token_sale_client.is_on_whitelist(client.address)
+        assert status == True
+
+    def test_remove_from_whitelist(self, token_sale_owner, client):
+        token_sale_owner.add_to_whitelist(client.address)
+        status = self.token_sale_client.is_on_whitelist(client.address)
+        assert status == True
+        token_sale_owner.remove_from_whitelist(client.address)
+        status = self.token_sale_client.is_on_whitelist(client.address)
+        assert status == False

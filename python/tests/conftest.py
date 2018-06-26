@@ -1,6 +1,8 @@
 import os
 
 # For unit tests, use local ganache test network
+from devise.owner.token_sale_owner import TokenSaleOwner
+
 os.environ["ETHEREUM_NETWORK"] = "ganache"
 
 import pytest
@@ -99,6 +101,18 @@ def token_client():
 def token_sale_client():
     account = Web3().eth.accounts[0]
     client = TokenSale(private_key=TEST_KEYS[0])
+
+    net_id = client.w3.version.network
+    if net_id == "1":
+        raise RuntimeError("Cowardly refusing to run tests against MainNet!!")
+
+    return client
+
+
+@pytest.fixture()
+def token_sale_owner():
+    account = Web3().eth.accounts[0]
+    client = TokenSaleOwner(private_key=TEST_KEYS[0])
 
     net_id = client.w3.version.network
     if net_id == "1":

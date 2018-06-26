@@ -1,5 +1,5 @@
 const DeviseToken = artifacts.require("./DeviseToken");
-const DeviseTokenSale = artifacts.require("./DeviseTokenSale");
+const DeviseTokenSale = artifacts.require("./DeviseTokenSaleBase");
 const DateTime = artifacts.require("./DateTime");
 const DeviseEternalStorage = artifacts.require("./DeviseEternalStorage");
 const DeviseRentalBase = artifacts.require("./DeviseRentalProxy");

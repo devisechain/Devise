@@ -1,11 +1,11 @@
 (function () {
     const DeviseToken = artifacts.require("./DeviseToken");
-    const DeviseTokenSale = artifacts.require("./DeviseTokenSale");
+    const DeviseTokenSale = artifacts.require("./DeviseTokenSaleBase");
     const DateTime = artifacts.require("./DateTime");
     const DeviseEternalStorage = artifacts.require("./DeviseEternalStorage");
     const DeviseRentalProxy = artifacts.require("./DeviseRentalProxy");
     const DeviseRentalImpl = artifacts.require("./DeviseRentalImpl");
-    const strategies = require('./strategies');
+    const leptons = require('./leptons');
     const {timeTravel, evmSnapshot, evmRevert, timestampToDate} = require('./test-utils');
 
     const pitai = web3.eth.accounts[0];
@@ -107,11 +107,11 @@
             assert.equal(tx.logs[i].args.ben, bene);
         });
 
-        it("Should observe the strategy added event", async () => {
-            const str = strategies[0];
+        it("Should observe the lepton added event", async () => {
+            const str = leptons[0];
             const iu = 1000000 * (3);
-            const tx = await rentalProxy.addStrategy(str, iu);
-            const eventName = "StrategyAdded";
+            const tx = await rentalProxy.addLepton(str, iu);
+            const eventName = "LeptonAdded";
             const i = await findEvent(tx, eventName);
             assert.equal(tx.logs[i].event, eventName);
             assert.equal(tx.logs[i].args.s, str);
@@ -150,13 +150,13 @@
         });
 
         it("Should observe the power user minimum changed", async () => {
-            // Pit.AI adds strategies to rental contract
-            await rentalProxy.addStrategy(strategies[0], 1000000 * (300));
-            await rentalProxy.addStrategy(strategies[1], 1000000 * (300));
-            await rentalProxy.addStrategy(strategies[2], 1000000 * (200));
-            await rentalProxy.addStrategy(strategies[3], 1000000 * (200));
-            await rentalProxy.addStrategy(strategies[4], 1000000 * (100));
-            await rentalProxy.addStrategy(strategies[5], 1000000 * (100));
+            // Pit.AI adds leptons to rental contract
+            await rentalProxy.addLepton(leptons[0], 1000000 * (300));
+            await rentalProxy.addLepton(leptons[1], 1000000 * (300));
+            await rentalProxy.addLepton(leptons[2], 1000000 * (200));
+            await rentalProxy.addLepton(leptons[3], 1000000 * (200));
+            await rentalProxy.addLepton(leptons[4], 1000000 * (100));
+            await rentalProxy.addLepton(leptons[5], 1000000 * (100));
             const tx = await rentalProxy.updateLeaseTerms();
             const eventName = "FeeChanged";
             const i = await findEvent(tx, eventName);
@@ -216,7 +216,7 @@
 
         it("Should observe the renter added event", async () => {
             const client = clients[0];
-            await Promise.all(strategies.map(async strategy => await rentalProxy.addStrategy(strategy, IUDecimals * (3))));
+            await Promise.all(leptons.map(async lepton => await rentalProxy.addLepton(lepton, IUDecimals * (3))));
             // approve so to recognize revenue
             // 10 million tokens
             const rev_amount = 10 * millionDVZ * microDVZ;
@@ -245,7 +245,7 @@
 
         it("Should observe the renter removed event", async () => {
             const client = clients[0];
-            await Promise.all(strategies.map(async strategy => await rentalProxy.addStrategy(strategy, IUDecimals * (3))));
+            await Promise.all(leptons.map(async lepton => await rentalProxy.addLepton(lepton, IUDecimals * (3))));
             // approve so to recognize revenue
             // 10 million tokens
             const rev_amount = 10 * millionDVZ * microDVZ;

@@ -1,6 +1,6 @@
 (function () {
 
-    const DeviseTokenSale = artifacts.require("./DeviseTokenSale");
+    const DeviseTokenSale = artifacts.require("./DeviseTokenSaleBase");
     const DeviseRentalBase = artifacts.require("./DeviseRentalProxy");
     const DeviseEternalStorage = artifacts.require("./DeviseEternalStorage");
     const DeviseRental_v1 = artifacts.require("./test/DeviseRentalImplTest");
@@ -8,7 +8,7 @@
     const DateTime = artifacts.require("./DateTime");
     const moment = require('moment');
     const {timestampToDate} = require('./test-utils');
-    const strategies = require('./strategies');
+    const leptons = require('./leptons');
     const assertRevert = require('./helpers/assertRevert');
 
     const pitai = web3.eth.accounts[0];
@@ -53,16 +53,16 @@
         const escrow_cap = 1000000000000000000 * microDVZ;
         await token.approve(rental.address, escrow_cap, {from: pitaiWallet});
 
-        // test addStrategy can't be called prior to authorize
-        await assertRevert(rental.addStrategy(strategies[0], 1000000 * (3)));
+        // test addLepton can't be called prior to authorize
+        await assertRevert(rental.addLepton(leptons[0], 1000000 * (3)));
         await estor.authorize(proxy.address);
-        // Pit.AI adds strategies to rental contract
-        await rental.addStrategy(strategies[0], 1000000 * (3));
-        await rental.addStrategy(strategies[1], 1000000 * (3));
-        await rental.addStrategy(strategies[2], 1000000 * (2));
-        await rental.addStrategy(strategies[3], 1000000 * (2));
-        await rental.addStrategy(strategies[4], 1000000 * (1));
-        await rental.addStrategy(strategies[5], 1000000 * (1));
+        // Pit.AI adds leptons to rental contract
+        await rental.addLepton(leptons[0], 1000000 * (3));
+        await rental.addLepton(leptons[1], 1000000 * (3));
+        await rental.addLepton(leptons[2], 1000000 * (2));
+        await rental.addLepton(leptons[3], 1000000 * (2));
+        await rental.addLepton(leptons[4], 1000000 * (1));
+        await rental.addLepton(leptons[5], 1000000 * (1));
         // Some clients buy tokens and approve transfer to rental contract
         const ether_amount = 3000;
         await Promise.all(clients.map(async client => {
@@ -255,11 +255,11 @@
             await rental.leaseAll(10000, 10, {from: client1});
             const client1Balance = (await rental.getAllowance.call({from: client1})).toNumber();
 
-            // add a strategy to increse totalUsefulness, current term price stays the same, next term increases in price
+            // add a lepton to increse totalUsefulness, current term price stays the same, next term increases in price
             const priceMonth1 = (await rental.getRentPerSeatCurrentTerm.call()).toNumber();
             const usefulness = Math.floor((await rental.getTotalUsefulness()).toNumber() / 1000000);
             assert.equal((await rental.getIndicativeRentPerSeatNextTerm.call()).toNumber(), priceMonth1);
-            await rental.addStrategy(strategies[6], 1000000 * (1));
+            await rental.addLepton(leptons[6], 1000000 * (1));
             assert.equal(Math.floor((await rental.getTotalUsefulness()).toNumber() / 1000000), usefulness + 1);
             assert.equal((await rental.getRentPerSeatCurrentTerm.call()).toNumber(), priceMonth1);
 
@@ -476,12 +476,12 @@
             assert.equal(bal2, 100000 - 10000);
         });
 
-        it("Can list all strategies in the blockchain", async () => {
-            const numStrats = (await rental.getNumberOfStrategies.call()).toNumber();
-            assert.equal(numStrats, 6);
-            for (let i = 0; i < numStrats; i++) {
-                const strat = await rental.getStrategy(i);
-                assert.equal(strat[1] + strat[0], strategies[i]);
+        it("Can list all leptons in the blockchain", async () => {
+            const numLeptons = (await rental.getNumberOfLeptons.call()).toNumber();
+            assert.equal(numLeptons, 6);
+            for (let i = 0; i < numLeptons; i++) {
+                const lepton = await rental.getLepton(i);
+                assert.equal(lepton[1] + lepton[0], leptons[i]);
             }
         });
 

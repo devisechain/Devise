@@ -343,6 +343,8 @@ class BaseEthereumClient(object):
         else:
             unsigned_transaction = serializable_unsigned_transaction_from_dict(transaction)
             pos = self._ledger.get_account_index(self.address)
+            self.logger.info(
+                "Signing transaction with your hardware wallet, please confirm on the hardware device when prompted...")
             (v, r, s) = self._ledger.sign(rlp.encode(unsigned_transaction), account_index=pos)
             encoded_transaction = encode_transaction(unsigned_transaction, vrs=(v, r, s))
             tx_hash = self.w3.eth.sendRawTransaction(encoded_transaction)

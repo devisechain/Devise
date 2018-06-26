@@ -1,6 +1,6 @@
 (function () {
     const DeviseToken = artifacts.require("./DeviseToken");
-    const DeviseTokenSale = artifacts.require("./DeviseTokenSale");
+    const DeviseTokenSale = artifacts.require("./DeviseTokenSaleBase");
     const DateTime = artifacts.require("./DateTime");
     const DeviseEternalStorage = artifacts.require("./DeviseEternalStorage");
     const DeviseRentalProxy = artifacts.require("./DeviseRentalProxy");
@@ -146,7 +146,7 @@
             const dvz_amount = 10 * millionDVZ * microDVZ;
             await token.approve(rentalProxy.address, dvz_amount, {from: client});
             await rentalProxy.provision(dvz_amount, {from: client});
-            await assertRevert(rentalProxy.applyForPowerUser({from: client}));
+            await assertRevert(rentalProxy.leaseAll(30000, 1));
         });
     });
 

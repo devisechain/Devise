@@ -1,7 +1,7 @@
 const DeviseRentalProxy = artifacts.require('DeviseRentalProxy');
 const Rental_V0 = artifacts.require('./test/DeviseRentalImplTest');
 const DeviseToken = artifacts.require("./DeviseToken");
-const DeviseTokenSale = artifacts.require("./DeviseTokenSale");
+const DeviseTokenSale = artifacts.require("./DeviseTokenSaleBase");
 const DateTime = artifacts.require("./DateTime");
 const DeviseEternalStorage = artifacts.require("./DeviseEternalStorage");
 

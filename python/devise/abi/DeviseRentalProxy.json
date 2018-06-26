@@ -238,7 +238,7 @@
         "type": "uint256"
       }
     ],
-    "name": "StrategyAdded",
+    "name": "LeptonAdded",
     "type": "event"
   },
   {
@@ -637,7 +637,7 @@
     "constant": false,
     "inputs": [
       {
-        "name": "_strategy",
+        "name": "_lepton",
         "type": "string"
       },
       {
@@ -645,7 +645,7 @@
         "type": "uint256"
       }
     ],
-    "name": "addStrategy",
+    "name": "addLepton",
     "outputs": [],
     "payable": false,
     "stateMutability": "nonpayable",
@@ -796,7 +796,40 @@
   {
     "constant": true,
     "inputs": [],
-    "name": "getNumberOfStrategies",
+    "name": "getNumberOfClients",
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "index",
+        "type": "uint256"
+      }
+    ],
+    "name": "getClient",
+    "outputs": [
+      {
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "getNumberOfLeptons",
     "outputs": [
       {
         "name": "",
@@ -857,7 +890,7 @@
         "type": "uint256"
       }
     ],
-    "name": "getStrategy",
+    "name": "getLepton",
     "outputs": [
       {
         "name": "",

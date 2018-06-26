@@ -1,11 +1,11 @@
 (function () {
-    const DeviseTokenSale = artifacts.require("./DeviseTokenSale");
+    const DeviseTokenSale = artifacts.require("./DeviseTokenSaleBase");
     const DeviseToken = artifacts.require("./DeviseToken");
     const DateTime = artifacts.require("./DateTime");
     const DeviseEternalStorage = artifacts.require("./DeviseEternalStorage");
     const DeviseRentalBase = artifacts.require("./DeviseRentalProxy");
     const DeviseRental_v1 = artifacts.require("./DeviseRentalImpl");
-    const strategies = require('./strategies');
+    const leptons = require('./leptons');
     const assertRevert = require('./helpers/assertRevert');
     const {timeTravel, evmSnapshot, evmRevert, timestampToDate} = require('./test-utils');
 
@@ -234,16 +234,16 @@
             rentalProxy = await DeviseRental_v1.at(proxy.address);
             await rentalProxy.setEscrowWallet(escrowWallet);
             await rentalProxy.setRevenueWallet(revenueWallet);
-            // Pit.AI adds strategies to rental contract
+            // Pit.AI adds leptons to rental contract
             // Given the setup, the minimum number of tokens to purchase is
             // 120,000 DVZ
             await estor.authorize(proxy.address);
-            await rentalProxy.addStrategy(strategies[0], 1000000 * (30));
-            await rentalProxy.addStrategy(strategies[1], 1000000 * (30));
-            await rentalProxy.addStrategy(strategies[2], 1000000 * (20));
-            await rentalProxy.addStrategy(strategies[3], 1000000 * (20));
-            await rentalProxy.addStrategy(strategies[4], 1000000 * (10));
-            await rentalProxy.addStrategy(strategies[5], 1000000 * (10));
+            await rentalProxy.addLepton(leptons[0], 1000000 * (30));
+            await rentalProxy.addLepton(leptons[1], 1000000 * (30));
+            await rentalProxy.addLepton(leptons[2], 1000000 * (20));
+            await rentalProxy.addLepton(leptons[3], 1000000 * (20));
+            await rentalProxy.addLepton(leptons[4], 1000000 * (10));
+            await rentalProxy.addLepton(leptons[5], 1000000 * (10));
 
             const blockNumber = web3.eth.blockNumber;
             const openingTime = web3.eth.getBlock(blockNumber).timestamp;
