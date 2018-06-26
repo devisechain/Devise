@@ -27,7 +27,7 @@ class install_all(_install):
 
 setup(name='devise',
       maintainer='Devise Foundation',
-      version='1.0',
+      version='1.1',
       license='GPL-3',
       description='Devise: An Ethereum Marketplace for Engineering Better Representations of Financial Markets',
       url='https://github.com/devisechain/devise',
