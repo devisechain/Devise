@@ -1,12 +1,12 @@
 pragma solidity ^0.4.19;
 
 import "./GroveBid.sol";
-import "./StrategyWarehouse.sol";
+import "./LeptonWarehouse.sol";
 
 
 /// @title Permanent data store for key state variables
 /// @author Pit.AI
-contract DeviseEternalStorage is GroveBid, StrategyWarehouse {
+contract DeviseEternalStorage is GroveBid, LeptonWarehouse {
     mapping(address => bool) internal authorized;
     address internal owner;
 
@@ -41,8 +41,8 @@ contract DeviseEternalStorage is GroveBid, StrategyWarehouse {
         removeEx(id);
     }
 
-    // StrategyWarehouse related interfaces
-    function addStrategy(string _strategy, uint _usefulness) public onlyAuthorized {
-        addStrategyEx(_strategy, _usefulness);
+    // LeptonWarehouse related interfaces
+    function addLepton(string _lepton, uint _usefulness) public onlyAuthorized {
+        addLeptonEx(_lepton, _usefulness);
     }
 }

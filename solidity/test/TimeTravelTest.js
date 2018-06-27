@@ -1,12 +1,12 @@
 (function () {
     const DeviseToken = artifacts.require("./DeviseToken");
-    const DeviseTokenSale = artifacts.require("./DeviseTokenSale");
+    const DeviseTokenSale = artifacts.require("./DeviseTokenSaleBase");
     const DateTime = artifacts.require("./DateTime");
     const DeviseEternalStorage = artifacts.require("./DeviseEternalStorage");
     const DeviseRentalProxy = artifacts.require("./DeviseRentalProxy");
     const DeviseRentalImpl = artifacts.require("./test/DeviseRentalImplTimeTravel");
     const TimeTravel = artifacts.require("./test/TimeTravel");
-    const strategies = require('./strategies');
+    const leptons = require('./leptons');
 
     const pitai = web3.eth.accounts[0];
     const tokenOwner = web3.eth.accounts[1];
@@ -69,7 +69,7 @@
 
         it("Should deduct rent when time travel 31 days", async () => {
             const client = clients[0];
-            await Promise.all(strategies.map(async strategy => await rentalProxy.addStrategy(strategy, IUDecimals * (3))));
+            await Promise.all(leptons.map(async lepton => await rentalProxy.addLepton(lepton, IUDecimals * (3))));
             // approve so to recognize revenue
             // 10 million tokens
             const rev_amount = 10 * millionDVZ * microDVZ;

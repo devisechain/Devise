@@ -36,7 +36,7 @@ class RentalAPI(BaseDeviseClient):
 
         Example Usage:
             url = client.get_signed_api_url(
-                      '/v1/strategy/0x627306090abab3a6e1400e9345bc60c78a8bef57/weights',
+                      '/v1/devisechain/0x627306090abab3a6e1400e9345bc60c78a8bef57/weights',
                       {start_timestamp: 1515615156})
 
         """
@@ -88,7 +88,7 @@ class RentalAPI(BaseDeviseClient):
 
     def download_latest_weights(self):
         """Downloads the last weights available for for each lepton in the blockchain"""
-        api_url = API_ROOT + self.get_signed_api_url('/v1/strategy/latest_weights')
+        api_url = API_ROOT + self.get_signed_api_url('/v1/devisechain/latest_weights')
         self.logger.info("Downloading %s", api_url)
         with tempfile.NamedTemporaryFile() as temp:
             self._download(api_url, temp.name)
@@ -100,11 +100,11 @@ class RentalAPI(BaseDeviseClient):
     def download_historical_weights(self):
         """Downloads a historical archive with all the weights calculated for each lepton in the blockchain
          excluding recent weights"""
-        api_url = API_ROOT + self.get_signed_api_url('/v1/strategy/historical_weights')
+        api_url = API_ROOT + self.get_signed_api_url('/v1/devisechain/historical_weights')
         self._download(api_url, 'devise_historical_weights.tar')
 
     def download_historical_returns(self):
         """Downloads a historical archive with all the returns calculated for each lepton in the blockchain
          excluding recent returns"""
-        api_url = API_ROOT + self.get_signed_api_url('/v1/strategy/historical_returns')
+        api_url = API_ROOT + self.get_signed_api_url('/v1/devisechain/historical_returns')
         self._download(api_url, 'devise_historical_returns.tar')

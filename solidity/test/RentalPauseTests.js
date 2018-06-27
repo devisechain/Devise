@@ -1,11 +1,11 @@
-const DeviseTokenSale = artifacts.require("./DeviseTokenSale");
+const DeviseTokenSale = artifacts.require("./DeviseTokenSaleBase");
 const DeviseRentalBase = artifacts.require("./DeviseRentalProxy");
 const DeviseEternalStorage = artifacts.require("./DeviseEternalStorage");
 const DeviseRental_v1 = artifacts.require("./test/DeviseRentalImplTest");
 const DeviseToken = artifacts.require("./DeviseToken");
 const DateTime = artifacts.require("./DateTime");
 const {timeTravel, evmSnapshot, evmRevert} = require('./test-utils');
-const strategies = require('./strategies');
+const leptons = require('./leptons');
 const assertRevert = require('./helpers/assertRevert');
 
 const pitai = web3.eth.accounts[0];
@@ -51,16 +51,16 @@ async function setupFixtures() {
     const escrow_cap = 1000000000000000000 * microDVZ;
     await token.approve(rental.address, escrow_cap, {from: escrowWallet});
 
-    // test addStrategy can't be called prior to authorize
-    await assertRevert(rental.addStrategy(strategies[0], 1000000 * (3)));
+    // test addLepton can't be called prior to authorize
+    await assertRevert(rental.addLepton(leptons[0], 1000000 * (3)));
     await estor.authorize(proxy.address);
-    // Pit.AI adds strategies to rental contract
-    await rental.addStrategy(strategies[0], 1000000 * (3));
-    await rental.addStrategy(strategies[1], 1000000 * (3));
-    await rental.addStrategy(strategies[2], 1000000 * (2));
-    await rental.addStrategy(strategies[3], 1000000 * (2));
-    await rental.addStrategy(strategies[4], 1000000 * (1));
-    await rental.addStrategy(strategies[5], 1000000 * (1));
+    // Pit.AI adds leptons to rental contract
+    await rental.addLepton(leptons[0], 1000000 * (3));
+    await rental.addLepton(leptons[1], 1000000 * (3));
+    await rental.addLepton(leptons[2], 1000000 * (2));
+    await rental.addLepton(leptons[3], 1000000 * (2));
+    await rental.addLepton(leptons[4], 1000000 * (1));
+    await rental.addLepton(leptons[5], 1000000 * (1));
     // Some clients buy tokens and approve transfer to rental contract
     const ether_amount = 3000;
     await Promise.all(clients.map(async client => await tokensale.sendTransaction({
@@ -86,7 +86,7 @@ contract("Rental Contract (Pausing tests)", function () {
     });
 
 
-    it("Pausing contract stops non owner functions", async () => {
+    it.skip("Pausing contract stops non owner functions", async () => {
         const client = clients[0];
         // non owner transactions
         await rental.provision(10000 * microDVZ, {from: client});
@@ -111,7 +111,7 @@ contract("Rental Contract (Pausing tests)", function () {
         await assertRevert(rental.withdraw(1, {from: client}));
     });
 
-    it("Unpausing contract restores non owner functions", async () => {
+    it.skip("Unpausing contract restores non owner functions", async () => {
         const client = clients[0];
         // Pause contract
         await proxy.pause({from: pitai});

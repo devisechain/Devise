@@ -122,7 +122,7 @@ contract DeviseRentalProxy is Proxy, DeviseRentalStorage {
             revert();
     }
 
-    /// @notice Gain access to historical data download for all the strategies
+    /// @notice Gain access to historical data download for all the leptons
     function requestHistoricalData() public whenNotPaused {
         address _impl = implementation();
         require(_impl != address(0));
@@ -364,6 +364,43 @@ contract DeviseRentalProxy is Proxy, DeviseRentalStorage {
         }
     }
 
+    /// @notice Get the number of clients
+    function getNumberOfClients() public view returns (uint) {
+        address _impl = implementation();
+        require(_impl != address(0));
+
+        assembly {
+            let ptr := mload(0x40)
+            calldatacopy(ptr, 0, calldatasize)
+            let result := delegatecall(gas, _impl, ptr, calldatasize, 0, 0)
+            let size := returndatasize
+            returndatacopy(ptr, 0, size)
+
+            switch result
+            case 0 {revert(ptr, size)}
+            default {return (ptr, size)}
+        }
+    }
+
+    /// @notice Get the client address at `(index)`
+    /// @param index the index for which to return the client address
+    function getClient(uint index) public view returns (address) {
+        address _impl = implementation();
+        require(_impl != address(0));
+
+        assembly {
+            let ptr := mload(0x40)
+            calldatacopy(ptr, 0, calldatasize)
+            let result := delegatecall(gas, _impl, ptr, calldatasize, 0, 0)
+            let size := returndatasize
+            returndatacopy(ptr, 0, size)
+
+            switch result
+            case 0 {revert(ptr, size)}
+            default {return (ptr, size)}
+        }
+    }
+
     /// @notice Get number of currently available seats for the current lease term
     function getSeatsAvailable() public view returns (uint) {
         address _impl = implementation();
@@ -419,8 +456,8 @@ contract DeviseRentalProxy is Proxy, DeviseRentalStorage {
         }
     }
 
-    /// @notice Get the current number of strategies
-    function getNumberOfStrategies() public view returns (uint) {
+    /// @notice Get the current number of leptons
+    function getNumberOfLeptons() public view returns (uint) {
         address _impl = implementation();
         require(_impl != address(0));
 
@@ -437,10 +474,10 @@ contract DeviseRentalProxy is Proxy, DeviseRentalStorage {
         }
     }
 
-    /// @notice Get the strategy and incremental usefulness at the specified index
-    /// @param index the index for which to return the strategy and incremental usefulness
-    /// @return (string strategyHash, uint incremental_usefulness * 1e9)
-    function getStrategy(uint index) public view returns (string, string, uint) {
+    /// @notice Get the lepton and incremental usefulness at the specified index
+    /// @param index the index for which to return the lepton and incremental usefulness
+    /// @return (string leptonHash, uint incremental_usefulness * 1e9)
+    function getLepton(uint index) public view returns (string, string, uint) {
         address _impl = implementation();
         require(_impl != address(0));
 

@@ -2,7 +2,7 @@
 /* global assert, artifacts, it, contract, web3*/
 
 const crypto = require('crypto');
-const DeviseTokenSale = artifacts.require("./DeviseTokenSale");
+const DeviseTokenSale = artifacts.require("./DeviseTokenSaleBase");
 const DeviseRentalImpl = artifacts.require("./test/DeviseRentalImplTest");
 const DeviseRentalImplV2 = artifacts.require("./DeviseRentalImplV3");
 const DeviseToken = artifacts.require("./DeviseToken");
@@ -33,13 +33,13 @@ const revenueWallet = web3.eth.accounts[3];
 let available_accounts = web3.eth.accounts.length - 2;
 let max_clients = num_clients > available_accounts ? available_accounts : num_clients;
 let clients = web3.eth.accounts.slice(4, num_clients + 4);
-// let num_strategies_per_round = 8;
-let num_fixed_strategies = 4;
+// let num_leptons_per_round = 8;
+let num_fixed_leptons = 4;
 // let max_seats = 10;
 let max_usefulness = 10000000;
 // let min_lease_price = 100;
-let num_strategies = 1;
-// let num_rounds = Math.ceil(num_strategies / num_stretegies_per_round);
+let num_leptons = 1;
+// let num_rounds = Math.ceil(num_leptons / num_stretegies_per_round);
 let ethPrice = 2000;
 // gas price is 24 GWei
 let gasPrice = 24;
@@ -157,7 +157,7 @@ async function designateBeneficiaryTestAsArray(testTitle, i) {
 function powerUserTestAsArray(testTitle, i) {
     it(testTitle, function () {
         return proxy.isPowerUser.call({from: clients[i]}).then(function (bal) {
-            assert.equal(bal, false);
+            assert.equal(bal, true);
         });
     });
 }
@@ -168,21 +168,21 @@ function getSha1Hash(i) {
     return hash.digest('hex');
 }
 
-let strategies = [];
+let leptons = [];
 let usefulnessSet = [];
 let total_price = 0;
 let min_price_per_bit = 1000;
 let totalUsefulness = 0;
 
-function addStrategyAsArray(testTitle, i) {
+function addLeptonAsArray(testTitle, i) {
     it(testTitle + (i + 1), async function () {
-        let str1 = strategies[i];
+        let str1 = leptons[i];
         let usefulness1 = usefulnessSet[i];
-        const tx = await rentalProxy.addStrategy(str1, usefulness1, {from: pitai});
+        const tx = await rentalProxy.addLepton(str1, usefulness1, {from: pitai});
         let gas = tx.receipt.gasUsed;
         console.log("Gas used: ", gas);
         let cost = gas * gasPrice * ethPrice / 10 ** 9;
-        console.log("The gas cost to call addStrategy is ", cost);
+        console.log("The gas cost to call addLepton is ", cost);
         const price = await rentalProxy.getIndicativeRentPerSeatNextTerm.call();
         total_price += min_price_per_bit * usefulness1;
         console.log("The usefulness is ", usefulness1);
@@ -254,7 +254,7 @@ function leaseAsArray(testTitle, i, j) {
         if (txid["logs"][5] !== undefined)
             console.log(txid["logs"][5]["args"]["title"], txid["logs"][5]["args"]["addr"]);
         const bal = await rentalProxy.getAllowance.call({from: clients[i]});
-        let ns = num_strategies;
+        let ns = num_leptons;
         pro_rata = prorata();
         console.log("The price for the month is ", balMap.get(ns));
         client_rental_m1.push(Math.floor(balMap.get(ns) * min_price_per_bit * pro_rata));
@@ -330,34 +330,31 @@ contract("DeviseRentalStatic", () => {
 
     // test case 6: Devise Rental: apply for power user status by client1
     let clubFee = 0;
-    it("Devise Rental: apply for power user status by client1", function () {
-        return rentalProxy.applyForPowerUser({from: clients[0]}).then(function (instance) {
-            const tx = instance;
-            let gas = tx.receipt.gasUsed;
-            console.log("Gas used: ", gas);
-            let cost = gas * gasPrice * ethPrice / 10 ** 9;
-            console.log("The gas cost to call applyForPowerUser is ", cost);
-            let len = tx["logs"].length;
-            const bal_chg = tx["logs"][len - 2]["args"]["amount"];
-            assert.equal(bal_chg.toNumber(), clubFee);
-            status = tx["logs"][len - 1]["args"]["status"];
-            assert.equal(status, true);
-        });
+    it("Devise Rental: apply for power user status by client1", async () => {
+        const initialBalance = (await rentalProxy.getAllowance({from: clients[0]})).toNumber();
+        const tx = await rentalProxy.applyForPowerUser({from: clients[0]});
+        let gas = tx.receipt.gasUsed;
+        console.log("Gas used: ", gas);
+        let cost = gas * gasPrice * ethPrice / 10 ** 9;
+        console.log("The gas cost to call applyForPowerUser is ", cost);
+        const newBalance = (await rentalProxy.getAllowance({from: clients[0]})).toNumber();
+        assert.equal(initialBalance - newBalance, clubFee);
+        assert.equal(await rentalProxy.isPowerUser({from: clients[0]}), true);
     });
 
-    // test case 7: Devise Rental: add strategy and get total usefulness
+    // test case 7: Devise Rental: add lepton and get total usefulness
     for (let i = 0; i < num_st_blockchain; i++) {
-        strategies.push(getSha1Hash(i.toString()));
+        leptons.push(getSha1Hash(i.toString()));
         usefulnessSet.push(getRandomInt(max_usefulness));
         totalUsefulness += usefulnessSet[i];
     }
 
-    let testTitle = "Devise Rental: add strategy ";
-    for (let i = 0; i < strategies.length; i++) {
-        addStrategyAsArray(testTitle, i);
+    let testTitle = "Devise Rental: add lepton ";
+    for (let i = 0; i < leptons.length; i++) {
+        addLeptonAsArray(testTitle, i);
     }
 
-    // IMPORTANT: addStrategy does not change usefulness for current term, only next term.
+    // IMPORTANT: addLepton does not change usefulness for current term, only next term.
     it("Devise Rental: PriceCurrentTerm is based on correct usefulness", async () => {
         const priceCur = await rentalProxy.getRentPerSeatCurrentTerm();
         const priceNext = await rentalProxy.getIndicativeRentPerSeatNextTerm();
@@ -378,7 +375,7 @@ contract("DeviseRentalStatic", () => {
         requestHistoricalDataAsArray("Devise Rental: request historical data by client", i);
     }
 
-    // test case 9: Devise Rental: lease strategies by client
+    // test case 9: Devise Rental: lease leptons by client
     seats = [9];
     let bid1 = [9 * 10 ** 3 * microDVZ];
     let bid2 = [6 * 10 ** 3 * microDVZ];
@@ -387,7 +384,7 @@ contract("DeviseRentalStatic", () => {
     let bid5 = [2 * 10 ** 3 * microDVZ];
     let bid6 = [8 * 10 ** 3 * microDVZ];
     bids = [bid1, bid2, bid3, bid4, bid5, bid6];
-    for (let i = 0; i < max_clients - num_fixed_strategies; i++) {
+    for (let i = 0; i < max_clients - num_fixed_leptons; i++) {
         let bid = [];
         let ran_bid = getRandomInt(90) + min_price_per_bit;
         bid.push(ran_bid);
@@ -399,14 +396,14 @@ contract("DeviseRentalStatic", () => {
     }
 
     for (let i = 0; i < clients.length; i++) {
-        leaseAsArray("Devise Rental: lease strategies by client", i, 0);
+        leaseAsArray("Devise Rental: lease leptons by client", i, 0);
     }
 
-    // test case 10: Devise Rental: calculate strategy prices for next term
-    updateLeaseTerms("Devise Rental: calculate strategy prices for next term");
+    // test case 10: Devise Rental: calculate lepton prices for next term
+    updateLeaseTerms("Devise Rental: calculate lepton prices for next term");
 
-    // test case 11: Devise Rental: get strategy price for next term
-    getPricesNextTermAsArray("Devise Rental: get strategy " + 1 + " price for next term", 0);
+    // test case 11: Devise Rental: get lepton price for next term
+    getPricesNextTermAsArray("Devise Rental: get lepton " + 1 + " price for next term", 0);
 
     // test case 12: Devise Rental: withdraw by client1
     it("Devise Rental: withdraw by client1", async function () {
@@ -417,7 +414,7 @@ contract("DeviseRentalStatic", () => {
         let cost = gas * gasPrice * ethPrice / 10 ** 9;
         console.log("The gas cost to call withdraw is ", cost);
         const bal = (await rentalProxy.getAllowance.call({from: clients[0]})).toNumber();
-        // let ns = num_strategies > num_fixed_strategies ? num_fixed_strategies : num_strategies;
+        // let ns = num_leptons > num_fixed_leptons ? num_fixed_leptons : num_leptons;
         console.log("The balance remaining after withdrawal ", bal);
         const dvz_amount = 10 * millionDVZ * microDVZ;
         assert.isAtMost(Math.abs(bal - (dvz_amount - client_rental_m1[0] - 5000 * microDVZ)), 1);
@@ -490,26 +487,26 @@ contract("DeviseRentalStatic2", () => {
         await rentalProxy_v2.setMasterNode(clients[0], {from: pitai});
     });
 
-    it('master node can add strategy', async function () {
-        let str1 = strategies[0];
+    it('master node can add lepton', async function () {
+        let str1 = leptons[0];
         let usefulness1 = usefulnessSet[0];
-        const tx = await rentalProxy_v2.addStrategy(str1, usefulness1, {from: clients[0]});
+        const tx = await rentalProxy_v2.addLepton(str1, usefulness1, {from: clients[0]});
         let gas = tx.receipt.gasUsed;
         console.log("Gas used: ", gas);
         let cost = gas * gasPrice * ethPrice / 10 ** 9;
-        console.log("The gas cost to call addStrategy is ", cost);
+        console.log("The gas cost to call addLepton is ", cost);
     });
 
-    it('owner cannot add strategy after upgrade', async function () {
-        let str1 = strategies[0];
+    it('owner cannot add lepton after upgrade', async function () {
+        let str1 = leptons[0];
         let usefulness1 = usefulnessSet[0];
-        await assertRevert(rentalProxy_v2.addStrategy(str1, usefulness1, {from: pitai}));
+        await assertRevert(rentalProxy_v2.addLepton(str1, usefulness1, {from: pitai}));
     });
 
-    it('The master node can add strategy after upgrade', async function () {
-        let str1 = strategies[0];
+    it('The master node can add lepton after upgrade', async function () {
+        let str1 = leptons[0];
         let usefulness1 = usefulnessSet[0];
-        await rentalProxy_v2.addStrategy(str1, usefulness1, {from: clients[0]});
+        await rentalProxy_v2.addLepton(str1, usefulness1, {from: clients[0]});
     });
 });
 

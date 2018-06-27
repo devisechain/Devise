@@ -142,11 +142,11 @@ class RentalContract(BaseDeviseClient):
         Returns the list of leptons currently on the Devise blockchain
         :return: a list of leptons in the order they were found and incremental usefulnesses added.
         """
-        count = self._rental_contract.functions.getNumberOfStrategies().call()
+        count = self._rental_contract.functions.getNumberOfLeptons().call()
         leptons = []
         prev_hash = None
         for i in range(count):
-            lepton_hash2, lepton_hash1, contract_iu = self._rental_contract.functions.getStrategy(i).call()
+            lepton_hash2, lepton_hash1, contract_iu = self._rental_contract.functions.getLepton(i).call()
             leptons.append({
                 "hash": lepton_hash1 + lepton_hash2,
                 "previous_hash": prev_hash,
@@ -158,8 +158,21 @@ class RentalContract(BaseDeviseClient):
 
     def get_all_clients(self):
         """
-        Get all current lease term client addresses from the smart contract
-        :return: a list of the current renters of the leptons on the blockchain
+        Get account summaries of all the addresses that have ever provisioned tokens.
+        :return: a list dicts containing the account summary of each address
+        """
+        count = self._rental_contract.functions.getNumberOfClients().call()
+        clients = []
+        for i in range(count):
+            client = self._rental_contract.functions.getClient(i).call()
+            clients.append(self.get_client_summary(client))
+
+        return clients
+
+    def get_all_renters(self):
+        """
+        Get renter account summaries of all current lease term renters from the smart contract
+        :return: a list of dicts containing the renters' account summaries
         """
         count = self._rental_contract.functions.getNumberOfRenters().call()
         clients = []
@@ -290,6 +303,13 @@ class RentalContract(BaseDeviseClient):
         Enable power user status on the current account. Subject to minimum balance requirement.
         :return bool The power user status (True if status change succeeds, False if it failed)
         """
+        if self.client_summary["power_user"]:
+            return True
+
+        assert self.dvz_balance_escrow >= self.indicative_rent_per_seat_next_term, (
+                "Insuffient DVZ balance in escrow, please provision at least %s DVZ tokens and try again" % (
+                self.indicative_rent_per_seat_next_term - self.dvz_balance_escrow))
+
         self._transact(self._rental_contract.functions.applyForPowerUser(), {"from": self.address})
         return self.client_summary["power_user"]
 
@@ -299,6 +319,13 @@ class RentalContract(BaseDeviseClient):
         Gain access to historical data archives
         :return bool The historical data access status (True if status change succeeds, False if it failed)
         """
+        if self.client_summary["historical_data_access"]:
+            return True
+
+        assert self.dvz_balance_escrow >= self.indicative_rent_per_seat_next_term, (
+                "Insuffient DVZ balance in escrow, please provision at least %s DVZ tokens and try again" % (
+                self.indicative_rent_per_seat_next_term - self.dvz_balance_escrow))
+
         self._transact(self._rental_contract.functions.requestHistoricalData(), {"from": self.address})
         return self.client_summary["historical_data_access"]
 

@@ -22,7 +22,7 @@ contract DeviseRentalStorage {
 
     struct Price {
         uint pricePerBitOfIU;
-        uint priceForAllStrategies;
+        uint priceForAllLeptons;
         uint totalIncrementalUsefulness;
     }
 
@@ -44,9 +44,7 @@ contract DeviseRentalStorage {
     // for production, change GENESIS_MONTH to 3
     // for testing purposes, set it to 1
     uint internal constant GENESIS_MONTH = 1;
-    string internal constant ALL_STRATEGIES = "All strategies";
-    uint internal constant INIT_POWER_USER_MIN = 10 ** 6 * 10 ** 6;
-    // power user minimum, 1,000,000 DVZ, 6 decimals
+    uint internal constant INIT_POWER_USER_MIN = 0;
     uint internal powerUserMinimum = INIT_POWER_USER_MIN;
     uint8 internal usefulnessDecimals = 6;
     uint32 internal usefulnessBaseline = uint32(10 ** uint256(usefulnessDecimals));
@@ -71,7 +69,7 @@ contract DeviseRentalStorage {
     // current renter status mapping
     mapping(address => bool) internal clientsAsRenters;
     address[] internal currentRenters;
-    // an array of strategy prices to loop through
+    // an array of lepton prices to loop through
     mapping(uint => Price) internal priceHistory;
 
     DeviseToken internal token;

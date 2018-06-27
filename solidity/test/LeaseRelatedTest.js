@@ -1,11 +1,11 @@
 (function () {
     const DeviseToken = artifacts.require("./DeviseToken");
-    const DeviseTokenSale = artifacts.require("./DeviseTokenSale");
+    const DeviseTokenSale = artifacts.require("./DeviseTokenSaleBase");
     const DateTime = artifacts.require("./DateTime");
     const DeviseEternalStorage = artifacts.require("./DeviseEternalStorage");
     const DeviseRentalProxy = artifacts.require("./DeviseRentalProxy");
     const DeviseRentalImpl = artifacts.require("./DeviseRentalImpl");
-    const strategies = require('./strategies');
+    const leptons = require('./leptons');
     const {timeTravel, evmSnapshot, evmRevert, timestampToDate} = require('./test-utils');
     const moment = require('moment');
 
@@ -83,7 +83,7 @@
         });
 
         it("Should charge the client for the inaugural lease term", async () => {
-            await rentalProxy.addStrategy(strategies[0], IUDecimals * (3));
+            await rentalProxy.addLepton(leptons[0], IUDecimals * (3));
             const client = clients[0];
             // approve so to recognize revenue
             // 10 million tokens
@@ -118,7 +118,7 @@
             const client = clients[0];
 
             beforeEach(async () => {
-                await Promise.all(strategies.map(async strategy => await rentalProxy.addStrategy(strategy, IUDecimals * (3))));
+                await Promise.all(leptons.map(async lepton => await rentalProxy.addLepton(lepton, IUDecimals * (3))));
                 // approve so to recognize revenue
                 // 10 million tokens
                 const rev_amount = 10 * millionDVZ * microDVZ;
@@ -217,7 +217,9 @@
                 const prc_sm = (await rentalProxy.getRentPerSeatCurrentTerm.call()).toNumber();
                 // confirm auction price increases to the client's bid
                 assert.equal(prc_sm, prc_per_bit * iu);
-                assert.equal(bal2, bal3 + charge);
+                // can charge either 1 term or 2 terms
+                const gap = (bal2 == bal3 + charge) || (bal2 == bal3 + 2 * charge);
+                assert.isTrue(gap);
             });
 
             it("Should be able to check price per bit", async () => {

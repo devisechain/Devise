@@ -30,14 +30,14 @@ contract DeviseRentalImplV3 is DeviseRentalImplV2 {
         masterNode = addr;
     }
 
-    function addStrategy(string _strategy, uint _incrementalUsefulness) public onlyMaster require(_incrementalUsefulness > 0) {
+    function addLepton(string _lepton, uint _incrementalUsefulness) public onlyMaster require(_incrementalUsefulness > 0) {
         var (y, m,) = getCurrentDate();
         uint IUTerm = calculateLeaseTerm(y, m) + 1;
         if (IUTerm > leaseTerm + 1) {
             // Price incrementalUsefulness is to be changed for a term past next term, we need to catchup missing terms first
             updateLeaseTerms();
         }
-        permData.addStrategy(_strategy, _incrementalUsefulness);
+        permData.addLepton(_lepton, _incrementalUsefulness);
         priceNextTerm.totalIncrementalUsefulness = totalIncrementalUsefulness = totalIncrementalUsefulness.add(_incrementalUsefulness);
     }
 

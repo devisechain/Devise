@@ -3,7 +3,7 @@ const DeviseRentalProxy = artifacts.require("./DeviseRentalProxy");
 const DateTime = artifacts.require("./DateTime");
 const DeviseToken = artifacts.require("./DeviseToken");
 const DeviseEternalStorage = artifacts.require("./DeviseEternalStorage");
-const DeviseTokenSale = artifacts.require("./DeviseTokenSale");
+const DeviseTokenSale = artifacts.require("./DeviseTokenSaleBase");
 
 module.exports = function (deployer, network, accounts) {
     const pitai = accounts[0];

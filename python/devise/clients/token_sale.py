@@ -117,3 +117,12 @@ class TokenSale(BaseDeviseClient):
         self.logger.info("Purchasing DVZ tokens at the exchange rate of $%s per ether", price)
         ethers = usd / float(price)
         return self._buy_tokens(ethers)
+
+    def is_on_whitelist(self, client):
+        """
+        Check if a client is on the white list
+        :param client: The address of the client to be checked
+        :return: Ture if the client is on the white list and False otherwise
+        """
+        status = self._token_sale_contract.functions.whitelist(client).call()
+        return status

@@ -36,7 +36,7 @@ contract DeviseRentalImpl is DeviseRentalStorage {
     event WalletChanged(string msg, address addr);
     event DataContractChanged(address addr);
     event BeneficiaryChanged(address addr, address ben);
-    event StrategyAdded(string s, uint iu);
+    event LeptonAdded(string s, uint iu);
     event LeaseTermUpdated(uint lt);
     event FeeChanged(string src, uint amt);
     event IncrementalUsefulnessPrecisionChanged(uint32 prec);
@@ -79,6 +79,7 @@ contract DeviseRentalImpl is DeviseRentalStorage {
     /// @notice transfers `(_amount)` from the token contract to the internal ledger for use to pay for lease
     /// @param _amount The number of tokens to allow for payment of lease dues
     function provision(uint _amount) public whenNotPaused require(_amount > 0) require(escrowWallet != 0x0) {
+        // bring contract state up to date with the current lease term to calculate current prices and escrow balances
         _updateLeaseTerms();
         token.transferFrom(msg.sender, escrowWallet, _amount);
         clients[msg.sender].allowance.balance = clients[msg.sender].allowance.balance.add(_amount);
@@ -86,12 +87,13 @@ contract DeviseRentalImpl is DeviseRentalStorage {
             clientsArray.push(msg.sender);
             clients[msg.sender].isClient = true;
         }
+        updatePowerUserStatus(msg.sender);
     }
 
     /// @notice Withdraw tokens back from the lease allowance to the Token contract
     /// @param amount The amount of tokens to withdraw
     function withdraw(uint amount) public whenNotPaused {
-        // Must update all auctions first to make sure allowance is correct
+        // bring contract state up to date with the current lease term to calculate current prices and escrow balances
         _updateLeaseTerms();
         Allowance storage _allow = clients[msg.sender].allowance;
         if (_allow.balance >= amount) {
@@ -132,6 +134,7 @@ contract DeviseRentalImpl is DeviseRentalStorage {
     /// @param _client the address of the client for which to return the beneficiary
     function getClientSummary(address _client) public view require(clients[_client].isClient)
     returns (address, uint, uint, uint, bool, bool, uint, uint) {
+        // bring contract state up to date with the current lease term to calculate current prices and escrow balances
         _updateLeaseTerms();
         Client client = clients[_client];
         uint seats = auctionSeats[_client];
@@ -153,6 +156,7 @@ contract DeviseRentalImpl is DeviseRentalStorage {
     /// @notice Updates and returns the current lease allowance in tokens of the `message.caller.address()`
     /// @return The allowance of the message sender
     function getAllowance() public view returns (uint amount) {
+        // bring contract state up to date with the current lease term to calculate current prices and escrow balances
         _updateLeaseTerms();
         return clients[msg.sender].allowance.balance;
     }
@@ -164,6 +168,7 @@ contract DeviseRentalImpl is DeviseRentalStorage {
     }
 
     function getPricePerBitCurrentTerm() public view returns (uint) {
+        // bring contract state up to date with the current lease term to calculate current prices and escrow balances
         _updateLeaseTerms();
         uint price = priceCurrentTerm.pricePerBitOfIU;
         return price;
@@ -171,6 +176,7 @@ contract DeviseRentalImpl is DeviseRentalStorage {
 
     /// @notice Get the prevailing price for the current lease term
     function getRentPerSeatCurrentTerm() public view returns (uint) {
+        // bring contract state up to date with the current lease term to calculate current prices and escrow balances
         _updateLeaseTerms();
         uint price = priceCurrentTerm.pricePerBitOfIU;
         uint totalIU = priceCurrentTerm.totalIncrementalUsefulness > 0 ? priceCurrentTerm.totalIncrementalUsefulness : totalIncrementalUsefulness;
@@ -179,6 +185,7 @@ contract DeviseRentalImpl is DeviseRentalStorage {
     }
 
     function getIndicativePricePerBitNextTerm() public view returns (uint) {
+        // bring contract state up to date with the current lease term to calculate current prices and escrow balances
         _updateLeaseTerms();
         calculateLeasePriceForNextTerm(0);
         uint price = priceNextTerm.pricePerBitOfIU;
@@ -187,28 +194,30 @@ contract DeviseRentalImpl is DeviseRentalStorage {
 
     /// @notice Get the current prevailing price for the next lease term
     function getIndicativeRentPerSeatNextTerm() public view returns (uint) {
+        // bring contract state up to date with the current lease term to calculate current prices and escrow balances
         _updateLeaseTerms();
         return _updatePriceNextTerm();
     }
 
-    /// @notice Add strategies to the be leased, to be called by the contract owners as strategies are mined and
-    /// selected
-    /// @param _strategy A sha1 strategy hash
-    /// @param _incrementalUsefulness The incremental usefulness added by the strategy being added
-    function addStrategy(string _strategy, uint _incrementalUsefulness) public onlyOwner require(_incrementalUsefulness > 0) {
+    /// @notice Add a lepton to the chain, to be called by the contract owners as leptons are mined and selected
+    /// @param _lepton A sha1 lepton hash
+    /// @param _incrementalUsefulness The incremental usefulness added by the lepton being added
+    function addLepton(string _lepton, uint _incrementalUsefulness) public onlyOwner require(_incrementalUsefulness > 0) {
         var (y, m,) = getCurrentDate();
         uint IUTerm = calculateLeaseTerm(y, m) + 1;
         if (IUTerm > leaseTerm + 1) {
             // Price incrementalUsefulness is to be changed for a term past next term, we need to catchup missing terms first
+            // bring contract state up to date with the current lease term to calculate current prices and escrow balances
             _updateLeaseTerms();
         }
-        permData.addStrategy(_strategy, _incrementalUsefulness);
+        permData.addLepton(_lepton, _incrementalUsefulness);
         priceNextTerm.totalIncrementalUsefulness = totalIncrementalUsefulness = totalIncrementalUsefulness.add(_incrementalUsefulness);
-        StrategyAdded(_strategy, _incrementalUsefulness);
+        LeptonAdded(_lepton, _incrementalUsefulness);
     }
 
     /// @notice apply for access to power user only data
     function applyForPowerUser() public whenNotPaused returns (bool status) {
+        // bring contract state up to date with the current lease term to calculate current prices and escrow balances
         _updateLeaseTerms();
         Allowance storage allow = clients[msg.sender].allowance;
         if (!allow.isPowerUser && allow.balance >= powerUserMinimum) {
@@ -224,13 +233,15 @@ contract DeviseRentalImpl is DeviseRentalStorage {
     /// @notice Check if `message.caller.address()` is a power user
     /// @return true if user is a power user, false otherwise
     function isPowerUser() public view returns (bool status) {
+        // bring contract state up to date with the current lease term to calculate current prices and escrow balances
         _updateLeaseTerms();
         Allowance storage _allow = clients[msg.sender].allowance;
         return _allow.isPowerUser;
     }
 
-    /// @notice Gain access to historical data download for all the strategies
+    /// @notice Gain access to historical data download for all the leptons
     function requestHistoricalData() public whenNotPaused {
+        // bring contract state up to date with the current lease term to calculate current prices and escrow balances
         _updateLeaseTerms();
         applyForPowerUser();
         Allowance storage _allow = clients[msg.sender].allowance;
@@ -261,6 +272,7 @@ contract DeviseRentalImpl is DeviseRentalStorage {
 
     /// @notice Bid for a number of seats up to a limit price per bit of information
     function leaseAll(uint limitPrice, uint8 _seats) public whenNotPaused returns (bool) {
+        // bring contract state up to date with the current lease term to calculate current prices and escrow balances
         _updateLeaseTerms();
         // check that client has enough tokens provisioned
         Allowance storage _allow = clients[msg.sender].allowance;
@@ -283,6 +295,7 @@ contract DeviseRentalImpl is DeviseRentalStorage {
 
     /// @notice Get the number of currently active renters
     function getNumberOfRenters() public view returns (uint) {
+        // bring contract state up to date with the current lease term to calculate current prices and escrow balances
         _updateLeaseTerms();
         return currentRenters.length;
     }
@@ -290,17 +303,30 @@ contract DeviseRentalImpl is DeviseRentalStorage {
     /// @notice Get the renter address at `(index)`
     /// @param index the index for which to return the renter address
     function getRenter(uint index) public view returns (address) {
+        // bring contract state up to date with the current lease term to calculate current prices and escrow balances
         _updateLeaseTerms();
         return currentRenters[index];
     }
 
-    /// @notice Get the current number of strategies
-    function getNumberOfStrategies() public view returns (uint) {
-        return permData.getNumberOfStrategies();
+    /// @notice Get the number of clients
+    function getNumberOfClients() public view returns (uint) {
+        return clientsArray.length;
+    }
+
+    /// @notice Get the client address at `(index)`
+    /// @param index the index for which to return the client's address
+    function getClient(uint index) public view returns (address) {
+        return clientsArray[index];
+    }
+
+    /// @notice Get the current number of leptons
+    function getNumberOfLeptons() public view returns (uint) {
+        return permData.getNumberOfLeptons();
     }
 
     /// @notice Get the current number of seats awarded to the sender for the current lease term
     function getCurrentTermSeats() public view returns (uint) {
+        // bring contract state up to date with the current lease term to calculate current prices and escrow balances
         _updateLeaseTerms();
         return auctionSeats[msg.sender];
     }
@@ -312,18 +338,19 @@ contract DeviseRentalImpl is DeviseRentalStorage {
 
     /// @notice get the current lease term number
     function getCurrentLeaseTerm() public view returns (uint) {
+        // bring contract state up to date with the current lease term to calculate current prices and escrow balances
         _updateLeaseTerms();
         return leaseTerm;
     }
 
-    /// @notice Get the strategy and incremental usefulness at the specified index
-    /// @param index the index for which to return the strategy and incremental usefulness
-    /// @return (string, string strategyHash, uint incremental_usefulness * 1e9)
-    function getStrategy(uint index) public view returns (string, string, uint) {
+    /// @notice Get the lepton and incremental usefulness at the specified index
+    /// @param index the index for which to return the lepton and incremental usefulness
+    /// @return (string, string leptonHash, uint incremental_usefulness * 1e9)
+    function getLepton(uint index) public view returns (string, string, uint) {
         bytes20 blobh;
         bytes20 blobl;
         uint e;
-        (blobh, blobl, e) = permData.getStrategy(index);
+        (blobh, blobl, e) = permData.getLepton(index);
         string memory sh = bytes20ToString(blobh);
         string memory sl = bytes20ToString(blobl);
         return (sh, sl, e);
@@ -331,6 +358,7 @@ contract DeviseRentalImpl is DeviseRentalStorage {
 
     /// @notice Get number of currently available seats for the current lease term
     function getSeatsAvailable() public view returns (uint) {
+        // bring contract state up to date with the current lease term to calculate current prices and escrow balances
         _updateLeaseTerms();
         return seatsAvailable;
     }
@@ -338,6 +366,7 @@ contract DeviseRentalImpl is DeviseRentalStorage {
     /// @notice update the lease term and renters list
     /// @return true if the state has been updated
     function updateLeaseTerms() public whenNotPaused {
+        // bring contract state up to date with the current lease term to calculate current prices and escrow balances
         _updateLeaseTerms();
     }
 
@@ -355,6 +384,7 @@ contract DeviseRentalImpl is DeviseRentalStorage {
 
     /// @notice Used by owner to change the minimum to retain power user privileges
     function getPowerUserMinimum() public view returns (uint) {
+        _updateLeaseTerms();
         _updatePowerUserMin();
         return powerUserMinimum;
     }
@@ -389,6 +419,7 @@ contract DeviseRentalImpl is DeviseRentalStorage {
      * Start of internal functions
      */
     function _getNextTermSeats(address _client) internal returns (uint seats) {
+        // bring contract state up to date with the current lease term to calculate current prices and escrow balances
         _updateLeaseTerms();
         calculateLeasePriceForNextTerm(leaseTerm + 1);
         updatePriceForCurrentTerm();
@@ -402,6 +433,9 @@ contract DeviseRentalImpl is DeviseRentalStorage {
         return totalPrice;
     }
 
+    /// @dev This is the main contract state updater. It catches up the lease terms by running the auction price logic
+    /// for each past and current lease term since the last closed auction. For each lease term, renter balances are
+    /// updated to reflect the rent paid for that term so that following auctions are based on accurate escrow balances.
     function _updateLeaseTerms() internal {
         var (y, m,) = getCurrentDate();
         uint lt = calculateLeaseTerm(y, m);
@@ -445,9 +479,9 @@ contract DeviseRentalImpl is DeviseRentalStorage {
         uint price = setAuctionPrice();
         AuctionPriceSet(lt, price);
         priceNextTerm.pricePerBitOfIU = price > minimumPricePerBit ? price : minimumPricePerBit;
-        priceNextTerm.priceForAllStrategies = priceNextTerm.pricePerBitOfIU.mul(priceNextTerm.totalIncrementalUsefulness)
+        priceNextTerm.priceForAllLeptons = priceNextTerm.pricePerBitOfIU.mul(priceNextTerm.totalIncrementalUsefulness)
         .div(usefulnessBaseline);
-        LeasePriceCalculated(priceNextTerm.pricePerBitOfIU, priceNextTerm.priceForAllStrategies);
+        LeasePriceCalculated(priceNextTerm.pricePerBitOfIU, priceNextTerm.priceForAllLeptons);
     }
 
     function setAuctionPrice() internal returns (uint) {
@@ -661,14 +695,21 @@ contract DeviseRentalImpl is DeviseRentalStorage {
 
     function updatePriceForCurrentTerm() internal {
         priceCurrentTerm.pricePerBitOfIU = priceNextTerm.pricePerBitOfIU;
-        priceCurrentTerm.priceForAllStrategies = priceNextTerm.priceForAllStrategies;
+        priceCurrentTerm.priceForAllLeptons = priceNextTerm.priceForAllLeptons;
         priceCurrentTerm.totalIncrementalUsefulness = priceNextTerm.totalIncrementalUsefulness;
         updateRentersList();
     }
 
     function updatePowerUserStatus(address _client) internal {
         Allowance storage _allow = clients[_client].allowance;
-        if (_allow.isPowerUser && _allow.balance < powerUserMinimum) {
+        // if there is no fee, no need to apply
+        if (_allow.balance >= powerUserMinimum) {
+            if (powerUserClubFee == 0) {
+                _allow.isPowerUser = true;
+                if (historicalDataFee == 0)
+                    _allow.canAccessHistoricalData = true;
+            }
+        } else if (_allow.isPowerUser || _allow.canAccessHistoricalData) {
             _allow.isPowerUser = false;
             _allow.canAccessHistoricalData = false;
         }

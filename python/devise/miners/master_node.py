@@ -28,6 +28,6 @@ class MasterNode(BaseDeviseClient):
         assert self._rental_contract.functions.owner().call() == self.account
         # Convert the iu to int based on our precision setting
         contract_iu = int(incremental_usefulness * IU_PRECISION)
-        # Call the contract's addStrategy
-        return self._transact(self._rental_contract.functions.addStrategy(lepton_hash, contract_iu),
+        # Call the contract's addLepton
+        return self._transact(self._rental_contract.functions.addLepton(lepton_hash, contract_iu),
                               {"from": self.account})
