@@ -135,8 +135,8 @@ If needed, you can request historical data to assess value-add:
 .. code-block:: python
 
     # Note: Historical data are free of charge, but your escrow account
-    # must be sufficiently provisioned to pay one month rent for the right
-    # to access historical data.
+    # must be sufficiently provisioned to pay one month rent to be allowed
+    # access historical data.
 
     # Check if you are currently allowed to request historical data.
     has_access = devise_client.client_summary['historical_data_access']
