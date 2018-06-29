@@ -42,7 +42,7 @@ The corresponding Dockerfile can be found in this repo under the python director
 How To Create A Client
 ======================
 
-The repo connects to the Ethereum network either through a public Ethereum node.
+The repo connects to the Ethereum network through a public Ethereum node.
 
 
 For signing Ethereum transactions and requests to our cryptographic API, we support the `Official Ethereum Wallet`_, hardware wallets (`Ledger Nano S`_ and Trezor_ to be specific), encrypted keystore files, and clear private keys.
