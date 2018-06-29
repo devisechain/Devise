@@ -2,7 +2,7 @@
 Devise: An Ethereum Marketplace for Engineering Better Representations of Financial Markets
 ###########################################################################################
 
-**Our smart contracts have not been deployed to the main Ethereum network yet, as they are currently undergoing a security audit. They will be deployed right after our security audit, at which point our Python package will be fully functional. Please regularly check this repo for an update.**
+**We are currently in private beta. If you are an investment manager and would like to gain access, please send us an email at devise_beta@pit.ai.**
 
 Official Python 3 client to interact with the Devise marketplace. To learn more about Devise, checkout our primer_.
 
