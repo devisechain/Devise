@@ -134,25 +134,23 @@ If needed, you can request historical data to assess value-add:
 
 .. code-block:: python
 
-    # Request the right to access historical data.
     # Note: Historical data are free of charge, but your escrow account
-    # must be sufficiently provisioned to pay one month rent for this
-    # request to be approved.
-    status = devise_client.request_historical_data_access()
+    # must be sufficiently provisioned to pay one month rent to be allowed
+    # access historical data.
 
     # Check if you are currently allowed to request historical data.
-    has_access = devise_client.client_summary['historical_data']
+    has_access = devise_client.client_summary['historical_data_access']
     print(has_access)
 
     # Download historical weights of all leptons on the devise
     # blockchain and store them in the file 'devise_historical_weights.tar'
     # in the current folder.
-    historical_weights = devise_client.download_historical_weights()
+    devise_client.download_historical_weights()
 
     # Download historical returns of all leptons on the devise
     # blockchain and store them in the file 'devise_historical_returns.tar'
     # in the current folder.
-    historical_returns = devise_client.download_historical_returns()
+    devise_client.download_historical_returns()
 
 Once you know how many seats you want to bid for, and at what price, you can submit your bid by running
 
