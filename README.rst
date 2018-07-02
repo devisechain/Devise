@@ -55,7 +55,7 @@ To use the `Official Ethereum Wallet`_, run
 .. code-block:: python
 
     from devise import DeviseClient
-    # Create a devise client object to interact with our smart-contracts and API.
+    # Create a Devise client object to interact with our smart contracts and API.
     devise_client = DeviseClient(account='0xd4a6B94E45B8c0185...', password='<your password>')
 
 
@@ -64,7 +64,7 @@ To use a hardware wallet, run
 .. code-block:: python
 
     from devise import DeviseClient
-    # Create a devise client object to interact with our smart-contracts and API.
+    # Create a Devise client object to interact with our smart contracts and API.
     devise_client = DeviseClient(account='0xd4a6B94E45B8c0185...', auth_type='[ledger|trezor]')
 
 
@@ -73,7 +73,7 @@ To use a keystore file, run
 .. code-block:: python
 
     from devise import DeviseClient
-    # Create a devise client object to interact with our smart-contracts and API.
+    # Create a Devise client object to interact with our smart contracts and API.
     devise_client = DeviseClient(key_file='<path to your encrypted json keystore file>', password='<your password>')
 
 
@@ -82,7 +82,7 @@ To use a clear private key, run
 .. code-block:: python
 
     from devise import DeviseClient
-    # Create a devise client object to interact with our smart-contracts and API.
+    # Create a Devise client object to interact with our smart contracts and API.
     devise_client = DeviseClient(private_key='<your private key>')
 
 
@@ -163,7 +163,7 @@ Once you know how many seats you want to bid for, and at what price, you can sub
     # The limit price the auction abides by is the limit price per bit of total incremental usefulness.
     # If between terms leptons are added to the chain, the total incremental usefulness might change,
     # and as a result you might be paying a higher rent. Your rent per seat and per unit of total
-    # incremental usefulness will however never excess your specified limit price per bit.
+    # incremental usefulness will however never exceed your specified limit price per bit.
     lmt_price = lmt_monthly_rent_per_seat/devise_client.total_incremental_usefulness
     devise_client.lease_all(lmt_price, seats)
 
