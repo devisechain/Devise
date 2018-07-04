@@ -97,7 +97,7 @@ How To Access To The Devise Blockchain
 In order to access the Devise blockchain, you need to i) have enough DVZ tokens, ii) fund your escrow account with us in DVZ, iii) submit a bid, and iv) request data from the API if your bid is successful.
 
 
-Here are a few ways of buying DVZ tokens in our initial sale:
+Our initial token sale requires all buyers (investment managers) to undergo KYC. Only whitelisted addresses can buy Devise tokens. To be whitelisted, send us an email at devise_beta@pit.ai. Once you've been whitelisted, here are a few ways of buying DVZ tokens:
 
 .. code-block:: python
 
