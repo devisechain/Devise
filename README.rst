@@ -44,7 +44,7 @@ For more detailed installation instructions, and for information on platform spe
 How To Create A Client
 ======================
 
-The repo connects to the Ethereum network either through a public Ethereum node.
+The repo connects to the Ethereum network through a public Ethereum node.
 
 
 For signing Ethereum transactions and requests to our cryptographic API, we support the `Official Ethereum Wallet`_, hardware wallets (`Ledger Nano S`_ and Trezor_ to be specific), encrypted keystore files, and clear private keys.
@@ -57,7 +57,7 @@ To use the `Official Ethereum Wallet`_, run
 .. code-block:: python
 
     from devise import DeviseClient
-    # Create a devise client object to interact with our smart-contracts and API.
+    # Create a Devise client object to interact with our smart contracts and API.
     devise_client = DeviseClient(account='0xd4a6B94E45B8c0185...', password='<your password>')
 
 
@@ -66,7 +66,7 @@ To use a hardware wallet, run
 .. code-block:: python
 
     from devise import DeviseClient
-    # Create a devise client object to interact with our smart-contracts and API.
+    # Create a Devise client object to interact with our smart contracts and API.
     devise_client = DeviseClient(account='0xd4a6B94E45B8c0185...', auth_type='[ledger|trezor]')
 
 
@@ -75,7 +75,7 @@ To use a keystore file, run
 .. code-block:: python
 
     from devise import DeviseClient
-    # Create a devise client object to interact with our smart-contracts and API.
+    # Create a Devise client object to interact with our smart contracts and API.
     devise_client = DeviseClient(key_file='<path to your encrypted json keystore file>', password='<your password>')
 
 
@@ -84,7 +84,7 @@ To use a clear private key, run
 .. code-block:: python
 
     from devise import DeviseClient
-    # Create a devise client object to interact with our smart-contracts and API.
+    # Create a Devise client object to interact with our smart contracts and API.
     devise_client = DeviseClient(private_key='<your private key>')
 
 
@@ -99,7 +99,7 @@ How To Access The Devise Blockchain
 In order to access the Devise blockchain, you need to i) have enough DVZ tokens, ii) fund your escrow account with us in DVZ, iii) submit a bid, and iv) request data from the API if your bid is successful.
 
 
-Here are a few ways of buying DVZ tokens in our initial sale:
+Our initial token sale requires all buyers (investment managers) to undergo KYC. Only whitelisted addresses can buy Devise tokens. To be whitelisted, send us an email at devise_beta@pit.ai. Once you've been whitelisted, here are a few ways of buying DVZ tokens:
 
 .. code-block:: python
 
@@ -136,25 +136,23 @@ If needed, you can request historical data to assess value-add:
 
 .. code-block:: python
 
-    # Request the right to access historical data.
     # Note: Historical data are free of charge, but your escrow account
-    # must be sufficiently provisioned to pay one month rent for this
-    # request to be approved.
-    status = devise_client.request_historical_data_access()
+    # must be sufficiently provisioned to pay one month rent to be allowed
+    # access historical data.
 
     # Check if you are currently allowed to request historical data.
-    has_access = devise_client.client_summary['historical_data']
+    has_access = devise_client.client_summary['historical_data_access']
     print(has_access)
 
     # Download historical weights of all leptons on the devise
     # blockchain and store them in the file 'devise_historical_weights.tar'
     # in the current folder.
-    historical_weights = devise_client.download_historical_weights()
+    devise_client.download_historical_weights()
 
     # Download historical returns of all leptons on the devise
     # blockchain and store them in the file 'devise_historical_returns.tar'
     # in the current folder.
-    historical_returns = devise_client.download_historical_returns()
+    devise_client.download_historical_returns()
 
 Once you know how many seats you want to bid for, and at what price, you can submit your bid by running
 
@@ -167,7 +165,7 @@ Once you know how many seats you want to bid for, and at what price, you can sub
     # The limit price the auction abides by is the limit price per bit of total incremental usefulness.
     # If between terms leptons are added to the chain, the total incremental usefulness might change,
     # and as a result you might be paying a higher rent. Your rent per seat and per unit of total
-    # incremental usefulness will however never excess your specified limit price per bit.
+    # incremental usefulness will however never exceed your specified limit price per bit.
     lmt_price = lmt_monthly_rent_per_seat/devise_client.total_incremental_usefulness
     devise_client.lease_all(lmt_price, seats)
 
