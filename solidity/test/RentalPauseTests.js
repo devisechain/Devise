@@ -47,20 +47,22 @@ async function setupFixtures() {
     rental = DeviseRental_v1.at(proxy.address);
     await rental.setEscrowWallet(escrowWallet);
     await rental.setRevenueWallet(revenueWallet);
+    await rental.addMasterNode(pitai);
+
 
     const escrow_cap = 1000000000000000000 * microDVZ;
     await token.approve(rental.address, escrow_cap, {from: escrowWallet});
 
     // test addLepton can't be called prior to authorize
-    await assertRevert(rental.addLepton(leptons[0], 1000000 * (3)));
+    await assertRevert(rental.addLepton(leptons[0], '', 1000000 * (3)));
     await estor.authorize(proxy.address);
     // Pit.AI adds leptons to rental contract
-    await rental.addLepton(leptons[0], 1000000 * (3));
-    await rental.addLepton(leptons[1], 1000000 * (3));
-    await rental.addLepton(leptons[2], 1000000 * (2));
-    await rental.addLepton(leptons[3], 1000000 * (2));
-    await rental.addLepton(leptons[4], 1000000 * (1));
-    await rental.addLepton(leptons[5], 1000000 * (1));
+    await rental.addLepton(leptons[0], '', 1000000 * (3));
+    await rental.addLepton(leptons[1], leptons[0], 1000000 * (3));
+    await rental.addLepton(leptons[2], leptons[1], 1000000 * (2));
+    await rental.addLepton(leptons[3], leptons[2], 1000000 * (2));
+    await rental.addLepton(leptons[4], leptons[3], 1000000 * (1));
+    await rental.addLepton(leptons[5], leptons[4], 1000000 * (1));
     // Some clients buy tokens and approve transfer to rental contract
     const ether_amount = 3000;
     await Promise.all(clients.map(async client => await tokensale.sendTransaction({

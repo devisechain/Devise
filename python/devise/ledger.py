@@ -6,6 +6,7 @@ import struct
 from ledgerblue.comm import getDongle
 
 ETHEREUM_PATH_PREFIX = "44'/60'/0'/"
+CHUNK_SIZE = 150
 
 
 class LedgerWallet:
@@ -32,17 +33,37 @@ class LedgerWallet:
         return result
 
     def _exchange(self, donglePath, rlp_encoded_tx=None):
+        result = None
         if rlp_encoded_tx is None:
             apdu = bytes.fromhex('e0020000')
             apdu += bytes([len(donglePath) + 1])
+            apdu += bytes([len(donglePath) // 4])
+            apdu += donglePath
+            result = self.dongle.exchange(apdu, timeout=60)
         else:
-            apdu = bytes.fromhex('e0040000')
-            apdu += bytes([len(donglePath) + 1 + len(rlp_encoded_tx)])
-        apdu += bytes([len(donglePath) // 4])
-        apdu += donglePath
-        if rlp_encoded_tx is not None:
-            apdu += rlp_encoded_tx
-        result = self.dongle.exchange(apdu, timeout=60)
+            offset = 0
+            while offset != len(rlp_encoded_tx):
+                if (len(rlp_encoded_tx) - offset) > CHUNK_SIZE:
+                    chunk = rlp_encoded_tx[offset: offset + CHUNK_SIZE]
+                else:
+                    chunk = rlp_encoded_tx[offset:]
+                if offset == 0:
+                    p1 = '00'
+                else:
+                    p1 = '80'
+
+                apdu = bytes.fromhex('e004' + p1 + '00')
+                if p1 == '00':
+                    apdu += bytes([len(donglePath) + 1 + len(chunk)])
+                    apdu += bytes([len(donglePath) // 4])
+                    apdu += donglePath
+                else:
+                    apdu += bytes([len(chunk)])
+
+                apdu += chunk
+                result = self.dongle.exchange(apdu, timeout=60)
+                offset += len(chunk)
+
         return result
 
     def get_address(self, account_index):

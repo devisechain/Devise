@@ -55,6 +55,7 @@
         rentalProxy = await DeviseRentalImpl.at(proxy.address);
         await rentalProxy.setEscrowWallet(escrowWallet);
         await rentalProxy.setRevenueWallet(revenueWallet);
+        await rentalProxy.addMasterNode(pitai);
 
         timeTravelSC = await TimeTravel.new({from: pitai});
         await rentalProxy.setTimeTravel(timeTravelSC.address, {from: pitai});
@@ -69,7 +70,10 @@
 
         it("Should deduct rent when time travel 31 days", async () => {
             const client = clients[0];
-            await Promise.all(leptons.map(async lepton => await rentalProxy.addLepton(lepton, IUDecimals * (3))));
+            const numLeptons = (await rentalProxy.getNumberOfLeptons()).toNumber();
+            for (let i = numLeptons; i < leptons.length; i++) {
+                await rentalProxy.addLepton(leptons[i], i > 0 ? leptons[i - 1] : '', IUDecimals * (3));
+            }
             // approve so to recognize revenue
             // 10 million tokens
             const rev_amount = 10 * millionDVZ * microDVZ;

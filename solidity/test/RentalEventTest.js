@@ -54,6 +54,7 @@
         rentalProxy = await DeviseRentalImpl.at(proxy.address);
         await rentalProxy.setEscrowWallet(escrowWallet);
         await rentalProxy.setRevenueWallet(revenueWallet);
+        await rentalProxy.addMasterNode(pitai);
     }
 
     async function findEvent(Tx, eventName) {
@@ -110,7 +111,7 @@
         it("Should observe the lepton added event", async () => {
             const str = leptons[0];
             const iu = 1000000 * (3);
-            const tx = await rentalProxy.addLepton(str, iu);
+            const tx = await rentalProxy.addLepton(str, '', iu);
             const eventName = "LeptonAdded";
             const i = await findEvent(tx, eventName);
             assert.equal(tx.logs[i].event, eventName);
@@ -151,12 +152,12 @@
 
         it("Should observe the power user minimum changed", async () => {
             // Pit.AI adds leptons to rental contract
-            await rentalProxy.addLepton(leptons[0], 1000000 * (300));
-            await rentalProxy.addLepton(leptons[1], 1000000 * (300));
-            await rentalProxy.addLepton(leptons[2], 1000000 * (200));
-            await rentalProxy.addLepton(leptons[3], 1000000 * (200));
-            await rentalProxy.addLepton(leptons[4], 1000000 * (100));
-            await rentalProxy.addLepton(leptons[5], 1000000 * (100));
+            await rentalProxy.addLepton(leptons[0], '', 1000000 * (300));
+            await rentalProxy.addLepton(leptons[1], leptons[0], 1000000 * (300));
+            await rentalProxy.addLepton(leptons[2], leptons[1], 1000000 * (200));
+            await rentalProxy.addLepton(leptons[3], leptons[2], 1000000 * (200));
+            await rentalProxy.addLepton(leptons[4], leptons[3], 1000000 * (100));
+            await rentalProxy.addLepton(leptons[5], leptons[4], 1000000 * (100));
             const tx = await rentalProxy.updateLeaseTerms();
             const eventName = "FeeChanged";
             const i = await findEvent(tx, eventName);
@@ -216,7 +217,10 @@
 
         it("Should observe the renter added event", async () => {
             const client = clients[0];
-            await Promise.all(leptons.map(async lepton => await rentalProxy.addLepton(lepton, IUDecimals * (3))));
+            const numLeptons = (await rentalProxy.getNumberOfLeptons()).toNumber();
+            for (let i = numLeptons; i < leptons.length; i++) {
+                await rentalProxy.addLepton(leptons[i], i > 0 ? leptons[i - 1] : '', IUDecimals * (3));
+            }
             // approve so to recognize revenue
             // 10 million tokens
             const rev_amount = 10 * millionDVZ * microDVZ;
@@ -245,7 +249,10 @@
 
         it("Should observe the renter removed event", async () => {
             const client = clients[0];
-            await Promise.all(leptons.map(async lepton => await rentalProxy.addLepton(lepton, IUDecimals * (3))));
+            const numLeptons = (await rentalProxy.getNumberOfLeptons()).toNumber();
+            for (let i = numLeptons; i < leptons.length; i++) {
+                await rentalProxy.addLepton(leptons[i], i > 0 ? leptons[i - 1] : '', IUDecimals * (3));
+            }
             // approve so to recognize revenue
             // 10 million tokens
             const rev_amount = 10 * millionDVZ * microDVZ;

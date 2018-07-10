@@ -1,6 +1,24 @@
 [
   {
     "constant": true,
+    "inputs": [
+      {
+        "name": "addr",
+        "type": "address"
+      },
+      {
+        "name": "roleName",
+        "type": "string"
+      }
+    ],
+    "name": "checkRole",
+    "outputs": [],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
     "inputs": [],
     "name": "totalSeats",
     "outputs": [
@@ -15,8 +33,50 @@
   },
   {
     "constant": true,
+    "inputs": [
+      {
+        "name": "addr",
+        "type": "address"
+      },
+      {
+        "name": "roleName",
+        "type": "string"
+      }
+    ],
+    "name": "hasRole",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
     "inputs": [],
     "name": "minimumPricePerBit",
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "",
+        "type": "bytes20"
+      }
+    ],
+    "name": "leptons",
     "outputs": [
       {
         "name": "",
@@ -49,6 +109,20 @@
       {
         "name": "",
         "type": "bool"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "ROLE_MASTER_NODE",
+    "outputs": [
+      {
+        "name": "",
+        "type": "string"
       }
     ],
     "payable": false,
@@ -91,6 +165,25 @@
       {
         "name": "",
         "type": "uint8"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "masterNodes",
+    "outputs": [
+      {
+        "name": "",
+        "type": "address"
       }
     ],
     "payable": false,
@@ -230,7 +323,7 @@
       {
         "indexed": false,
         "name": "s",
-        "type": "string"
+        "type": "bytes20"
       },
       {
         "indexed": false,
@@ -374,6 +467,40 @@
       }
     ],
     "name": "BidCanceled",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "name": "addr",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "name": "roleName",
+        "type": "string"
+      }
+    ],
+    "name": "RoleAdded",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "name": "addr",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "name": "roleName",
+        "type": "string"
+      }
+    ],
+    "name": "RoleRemoved",
     "type": "event"
   },
   {
@@ -638,7 +765,11 @@
     "inputs": [
       {
         "name": "_lepton",
-        "type": "string"
+        "type": "bytes20"
+      },
+      {
+        "name": "_prevLepton",
+        "type": "bytes20"
       },
       {
         "name": "_incrementalUsefulness",
@@ -649,6 +780,48 @@
     "outputs": [],
     "payable": false,
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "addr",
+        "type": "address"
+      }
+    ],
+    "name": "addMasterNode",
+    "outputs": [],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "addr",
+        "type": "address"
+      }
+    ],
+    "name": "removeMasterNode",
+    "outputs": [],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "getMasterNodes",
+    "outputs": [
+      {
+        "name": "",
+        "type": "address[]"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -894,11 +1067,7 @@
     "outputs": [
       {
         "name": "",
-        "type": "string"
-      },
-      {
-        "name": "",
-        "type": "string"
+        "type": "bytes20"
       },
       {
         "name": "",

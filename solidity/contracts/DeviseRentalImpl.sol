@@ -5,8 +5,12 @@ import "./DeviseRentalStorage.sol";
 
 /// @title A lease contract for synthetic market representations
 /// @author Pit.AI
-contract DeviseRentalImpl is DeviseRentalStorage {
+contract DeviseRentalImpl is DeviseRentalStorage, RBAC {
     using SafeMath for uint256;
+
+    string public constant ROLE_MASTER_NODE = "master-node";
+    address[] public masterNodes;
+    mapping(bytes20 => uint256) public leptons;
 
     modifier require(bool _condition) {
         if (!_condition) revert();
@@ -15,6 +19,11 @@ contract DeviseRentalImpl is DeviseRentalStorage {
 
     modifier onlyOwner() {
         if (msg.sender != owner) revert();
+        _;
+    }
+
+    modifier onlyMasterNodes() {
+        checkRole(msg.sender, ROLE_MASTER_NODE);
         _;
     }
 
@@ -36,7 +45,7 @@ contract DeviseRentalImpl is DeviseRentalStorage {
     event WalletChanged(string msg, address addr);
     event DataContractChanged(address addr);
     event BeneficiaryChanged(address addr, address ben);
-    event LeptonAdded(string s, uint iu);
+    event LeptonAdded(bytes20 s, uint iu);
     event LeaseTermUpdated(uint lt);
     event FeeChanged(string src, uint amt);
     event IncrementalUsefulnessPrecisionChanged(uint32 prec);
@@ -201,18 +210,50 @@ contract DeviseRentalImpl is DeviseRentalStorage {
 
     /// @notice Add a lepton to the chain, to be called by the contract owners as leptons are mined and selected
     /// @param _lepton A sha1 lepton hash
+    /// @param _prevLepton The previous sha1 lepton hash in the chain
     /// @param _incrementalUsefulness The incremental usefulness added by the lepton being added
-    function addLepton(string _lepton, uint _incrementalUsefulness) public onlyOwner require(_incrementalUsefulness > 0) {
-        var (y, m,) = getCurrentDate();
-        uint IUTerm = calculateLeaseTerm(y, m) + 1;
-        if (IUTerm > leaseTerm + 1) {
-            // Price incrementalUsefulness is to be changed for a term past next term, we need to catchup missing terms first
-            // bring contract state up to date with the current lease term to calculate current prices and escrow balances
-            _updateLeaseTerms();
+    function addLepton(bytes20 _lepton, bytes20 _prevLepton, uint _incrementalUsefulness) public onlyMasterNodes
+    require(_incrementalUsefulness > 0) {
+        uint numLeptons = permData.getNumberOfLeptons();
+        if (numLeptons > 0) {
+            var (prevHash,) = permData.getLepton(numLeptons - 1);
+            if (prevHash != _prevLepton)
+                revert("Previous lepton does not match the last lepton in the chain!");
         }
-        permData.addLepton(_lepton, _incrementalUsefulness);
-        priceNextTerm.totalIncrementalUsefulness = totalIncrementalUsefulness = totalIncrementalUsefulness.add(_incrementalUsefulness);
-        LeptonAdded(_lepton, _incrementalUsefulness);
+        if (leptons[_lepton] != 0)
+            revert("Duplicate lepton!");
+
+        _addLepton(_lepton, _incrementalUsefulness);
+        leptons[_lepton] = permData.getNumberOfLeptons();
+    }
+
+    /**
+     * @dev adds the master node role to an address
+     * @param addr address
+     */
+    function addMasterNode(address addr) public onlyOwner {
+        if (!hasRole(addr, ROLE_MASTER_NODE)) {
+            addRole(addr, ROLE_MASTER_NODE);
+            masterNodes.push(addr);
+        }
+    }
+
+    /**
+     * @dev removes the master node role from address
+     * @param addr address
+     */
+    function removeMasterNode(address addr) public onlyOwner {
+        if (hasRole(addr, ROLE_MASTER_NODE)) {
+            removeRole(addr, ROLE_MASTER_NODE);
+            removeMasterNodeByValue(addr);
+        }
+    }
+
+    /**
+     * @dev returns all current master nodes
+     */
+    function getMasterNodes() public constant returns (address[]) {
+        return masterNodes;
     }
 
     /// @notice apply for access to power user only data
@@ -346,14 +387,8 @@ contract DeviseRentalImpl is DeviseRentalStorage {
     /// @notice Get the lepton and incremental usefulness at the specified index
     /// @param index the index for which to return the lepton and incremental usefulness
     /// @return (string, string leptonHash, uint incremental_usefulness * 1e9)
-    function getLepton(uint index) public view returns (string, string, uint) {
-        bytes20 blobh;
-        bytes20 blobl;
-        uint e;
-        (blobh, blobl, e) = permData.getLepton(index);
-        string memory sh = bytes20ToString(blobh);
-        string memory sl = bytes20ToString(blobl);
-        return (sh, sl, e);
+    function getLepton(uint index) public view returns (bytes20, uint) {
+        return permData.getLepton(index);
     }
 
     /// @notice Get number of currently available seats for the current lease term
@@ -418,6 +453,39 @@ contract DeviseRentalImpl is DeviseRentalStorage {
     /*
      * Start of internal functions
      */
+    /// @dev Add a lepton to the chain, to be called by the contract owners as leptons are mined and selected
+    /// @param _lepton A sha1 lepton hash
+    /// @param _incrementalUsefulness The incremental usefulness added by the lepton being added
+    function _addLepton(bytes20 _lepton, uint _incrementalUsefulness) internal {
+        var (y, m,) = getCurrentDate();
+        uint IUTerm = calculateLeaseTerm(y, m) + 1;
+        if (IUTerm > leaseTerm + 1) {
+            // bring contract state up to date with the current lease term to calculate current prices and escrow balances
+            _updateLeaseTerms();
+        }
+        permData.addLepton(_lepton, _incrementalUsefulness);
+        priceNextTerm.totalIncrementalUsefulness = totalIncrementalUsefulness = totalIncrementalUsefulness.add(_incrementalUsefulness);
+        LeptonAdded(_lepton, _incrementalUsefulness);
+    }
+
+    /**
+     * @dev removes a master node from the master nodes array
+     */
+    function removeMasterNodeByValue(address addr) internal {
+        for (uint i; i < masterNodes.length; i++) {
+            if (masterNodes[i] == addr) {
+                if (masterNodes.length > 1) {
+                    // copy last element into this address spot and shrink array
+                    masterNodes[i] = masterNodes[masterNodes.length - 1];
+                    masterNodes.length--;
+                } else
+                    masterNodes.length = 0;
+
+                return;
+            }
+        }
+    }
+
     function _getNextTermSeats(address _client) internal returns (uint seats) {
         // bring contract state up to date with the current lease term to calculate current prices and escrow balances
         _updateLeaseTerms();
@@ -673,7 +741,7 @@ contract DeviseRentalImpl is DeviseRentalStorage {
         address client;
         bytes32 pNode;
 
-        while (curNode != 0x0) {
+        while (curNode != 0x0 && seatsAvailable > 0) {
             (client, seats, bid) = permData.getNodeValueBid(curNode);
             if (bid >= _price.pricePerBitOfIU && !clientsAsRenters[client]) {
                 uint dues = _price.pricePerBitOfIU.mul(_price.totalIncrementalUsefulness).div(usefulnessBaseline) * seats;
@@ -683,6 +751,8 @@ contract DeviseRentalImpl is DeviseRentalStorage {
                     continue;
                 }
                 currentRenters.push(client);
+                auctionSeats[client] = seatsAvailable < seats ? seatsAvailable : seats;
+                seatsAvailable = seatsAvailable - auctionSeats[client];
                 RenterAdded(client);
                 clientsAsRenters[client] = true;
             }

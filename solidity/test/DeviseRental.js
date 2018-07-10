@@ -140,7 +140,7 @@ function powerUserTestAsArray(testTitle, i) {
 function getSha1Hash(i) {
     const hash = crypto.createHash('sha1');
     hash.update(i);
-    return hash.digest('hex');
+    return '0x' + hash.digest('hex');
 }
 
 let leptons = [];
@@ -153,8 +153,9 @@ let totalUsefulness = 0;
 function addLeptonAsArray(testTitle, i) {
     it(testTitle + (i + 1), async function () {
         let str1 = leptons[i];
+        const prevLepton = i > 0 ? leptons[i - 1] : '';
         let usefulness1 = usefulnessSet[i];
-        const tx = await rentalProxy.addLepton(str1, usefulness1, {from: pitai});
+        const tx = await rentalProxy.addLepton(str1, prevLepton, usefulness1, {from: pitai});
         let gas = tx.receipt.gasUsed;
         console.log("Gas used: ", gas);
         let cost = gas * gasPrice * ethPrice / 10 ** 9;
@@ -315,6 +316,7 @@ contract("DeviseRental", () => {
         rentalProxy = await DeviseRentalImpl.at(proxy.address);
         await rentalProxy.setEscrowWallet(escrowWallet);
         await rentalProxy.setRevenueWallet(revenueWallet);
+        await rentalProxy.addMasterNode(pitai);
         rentalProxy_v2 = await DeviseRentalImplV2.at(proxy.address);
         assert.equal(proxy.address, rentalProxy.address);
         assert.equal(proxy.address, rentalProxy_v2.address);

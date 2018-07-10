@@ -234,16 +234,17 @@
             rentalProxy = await DeviseRental_v1.at(proxy.address);
             await rentalProxy.setEscrowWallet(escrowWallet);
             await rentalProxy.setRevenueWallet(revenueWallet);
+            await rentalProxy.addMasterNode(pitai);
             // Pit.AI adds leptons to rental contract
             // Given the setup, the minimum number of tokens to purchase is
             // 120,000 DVZ
             await estor.authorize(proxy.address);
-            await rentalProxy.addLepton(leptons[0], 1000000 * (30));
-            await rentalProxy.addLepton(leptons[1], 1000000 * (30));
-            await rentalProxy.addLepton(leptons[2], 1000000 * (20));
-            await rentalProxy.addLepton(leptons[3], 1000000 * (20));
-            await rentalProxy.addLepton(leptons[4], 1000000 * (10));
-            await rentalProxy.addLepton(leptons[5], 1000000 * (10));
+            await rentalProxy.addLepton(leptons[0], '', 1000000 * (30));
+            await rentalProxy.addLepton(leptons[1], leptons[0], 1000000 * (30));
+            await rentalProxy.addLepton(leptons[2], leptons[1], 1000000 * (20));
+            await rentalProxy.addLepton(leptons[3], leptons[2], 1000000 * (20));
+            await rentalProxy.addLepton(leptons[4], leptons[3], 1000000 * (10));
+            await rentalProxy.addLepton(leptons[5], leptons[4], 1000000 * (10));
 
             const blockNumber = web3.eth.blockNumber;
             const openingTime = web3.eth.getBlock(blockNumber).timestamp;

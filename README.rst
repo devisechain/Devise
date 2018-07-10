@@ -2,7 +2,7 @@
 Devise: An Ethereum Marketplace for Engineering Better Representations of Financial Markets
 ###########################################################################################
 
-**We are currently in private beta. If you are an investment manager and would like to gain access, please send us an email at devise_beta@pit.ai.**
+**Note: We are currently in private beta; only whitelisted users can buy Devise tokens and gain access. If you are an investment manager and would like to participate in our private beta, please send us an email at devise_beta@pit.ai.**
 
 Official Python 3 client to interact with the Devise marketplace. To learn more about Devise, checkout our primer_.
 
@@ -21,6 +21,7 @@ The easiest way to install the devise repo is from PyPi:
 
     $ pip install devise
 
+Note: On Windows, we currently recommend using our preconfigured Docker image (see below)
 
 Alternatively, you may clone this repo and install it:
 
@@ -30,14 +31,15 @@ Alternatively, you may clone this repo and install it:
     $ cd Devise/python
     $ pip install .
 
-
 We also provide a Docker image on Docker hub for your convenience:
 
 .. code-block:: text
 
-    $ docker run -ti -v ~/.devise:/root/.devise:rw devisechain/python
+    $ docker run -ti -p 127.0.0.1:3477:3477 -h localhost -v ~/.devise/:/home/ubuntu/.devise/ devisechain/python
 
 The corresponding Dockerfile can be found in this repo under the python directory.
+
+For more detailed installation instructions, and for information on platform specific system dependencies, please consult our `Installation Guide <https://github.com/devisechain/Devise/wiki/8.-Installation-Guide>`_
 
 How To Create A Client
 ======================
@@ -91,8 +93,8 @@ The :code:`password` argument is always optional. When it is needed for signing 
 If needed, you can override the public node used to connect to the Ethereum network by specifying a :code:`node_url` when creating your :code:`DeviseClient` instance.
 
 
-How To Access To The Devise Blockchain
-======================================
+How To Access The Devise Blockchain
+===================================
 
 In order to access the Devise blockchain, you need to i) have enough DVZ tokens, ii) fund your escrow account with us in DVZ, iii) submit a bid, and iv) request data from the API if your bid is successful.
 
