@@ -212,7 +212,7 @@ class TestDeviseClient(object):
         leptons = client.get_all_leptons()
         new_lepton = 'hello world %s' % (len(leptons) + 1)
         lepton_hash = hashlib.sha1(new_lepton.encode('utf8')).hexdigest()
-        master_node.add_lepton(lepton_hash, 0.5123456789123456789)
+        master_node.add_lepton(lepton_hash, None, 0.5123456789123456789)
 
         new_leptons = client.get_all_leptons()
         assert len(new_leptons) == len(leptons) + 1
@@ -283,7 +283,7 @@ class TestDeviseClient(object):
         }
 
     def test_rent_current_term(self, client, owner_client, master_node):
-        master_node.add_lepton(hashlib.sha1("some lepton".encode('utf8')).hexdigest(), 1.5123456789123456789)
+        master_node.add_lepton(hashlib.sha1("some lepton".encode('utf8')).hexdigest(), None, 1.5123456789123456789)
         assert client.rent_per_seat_current_term == 1512.345000
         time_travel(86400 * 31, client)
         assert client.rent_per_seat_current_term > 0
@@ -292,12 +292,12 @@ class TestDeviseClient(object):
         assert client.price_per_bit_current_term == 1000
 
     def test_indicative_rent_next_term(self, client, master_node):
-        master_node.add_lepton(hashlib.sha1("some lepton".encode('utf8')).hexdigest(), 1.5123456789123456789)
+        master_node.add_lepton(hashlib.sha1("some lepton".encode('utf8')).hexdigest(), None, 1.5123456789123456789)
         price_next_term = client.indicative_rent_per_seat_next_term
         assert price_next_term > 0
 
     def test_indicative_price_next_term(self, client, master_node):
-        master_node.add_lepton(hashlib.sha1("some lepton".encode('utf8')).hexdigest(), 1.5123456789123456789)
+        master_node.add_lepton(hashlib.sha1("some lepton".encode('utf8')).hexdigest(), None, 1.5123456789123456789)
         assert client.indicative_price_per_bit_next_term == 1000
 
     @mock.patch("devise.clients.api.RentalAPI._download")
@@ -349,7 +349,7 @@ class TestDeviseClient(object):
         """Tests that we can get all the bids in the price auction"""
         # Add leptons
         lepton_hash = hashlib.sha1('hello world 1'.encode('utf8')).hexdigest()
-        master_node.add_lepton(lepton_hash, 1.5123456789123456789)
+        master_node.add_lepton(lepton_hash, None, 1.5123456789123456789)
 
         # client 1 buys and provisions tokens
         client.buy_eth_worth_of_tokens(2)
@@ -382,7 +382,7 @@ class TestDeviseClient(object):
 
     def test_lease_all_seats(self, client, master_node):
         lepton_hash = hashlib.sha1('hello world 1'.encode('utf8')).hexdigest()
-        master_node.add_lepton(lepton_hash, 1.5123456789123456789)
+        master_node.add_lepton(lepton_hash, None, 1.5123456789123456789)
 
         # Buy enough tokens for 1 term
         currentRate = client._token_sale_contract.functions.getCurrentRate().call()
@@ -397,7 +397,7 @@ class TestDeviseClient(object):
         assert client.next_term_seats == 0
 
         # provision enough tokens for next term auction
-        client.buy_eth_worth_of_tokens(ethers=1)
+        client.buy_eth_worth_of_tokens(ethers=(15500 / currentRate))
         client.provision(client.dvz_balance)
         assert client.next_term_seats == 10
         client.cancel_bid()

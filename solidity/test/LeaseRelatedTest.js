@@ -80,10 +80,11 @@
             rentalProxy = await DeviseRentalImpl.at(proxy.address);
             await rentalProxy.setEscrowWallet(escrowWallet);
             await rentalProxy.setRevenueWallet(revenueWallet);
+            await rentalProxy.addMasterNode(pitai);
         });
 
         it("Should charge the client for the inaugural lease term", async () => {
-            await rentalProxy.addLepton(leptons[0], IUDecimals * (3));
+            await rentalProxy.addLepton(leptons[0], '', IUDecimals * (3));
             const client = clients[0];
             // approve so to recognize revenue
             // 10 million tokens
@@ -118,7 +119,10 @@
             const client = clients[0];
 
             beforeEach(async () => {
-                await Promise.all(leptons.map(async lepton => await rentalProxy.addLepton(lepton, IUDecimals * (3))));
+                const numLeptons = (await rentalProxy.getNumberOfLeptons()).toNumber();
+                for (let i = numLeptons; i < leptons.length; i++) {
+                    await rentalProxy.addLepton(leptons[i], i > 0 ? leptons[i - 1] : '', IUDecimals * (3));
+                }
                 // approve so to recognize revenue
                 // 10 million tokens
                 const rev_amount = 10 * millionDVZ * microDVZ;

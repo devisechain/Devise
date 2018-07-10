@@ -476,8 +476,8 @@ contract DeviseRentalProxy is Proxy, DeviseRentalStorage {
 
     /// @notice Get the lepton and incremental usefulness at the specified index
     /// @param index the index for which to return the lepton and incremental usefulness
-    /// @return (string leptonHash, uint incremental_usefulness * 1e9)
-    function getLepton(uint index) public view returns (string, string, uint) {
+    /// @return (bytes20 leptonHash, uint incremental_usefulness * 1e9)
+    function getLepton(uint index) public view returns (bytes20, uint) {
         address _impl = implementation();
         require(_impl != address(0));
 

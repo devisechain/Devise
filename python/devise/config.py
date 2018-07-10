@@ -13,9 +13,9 @@
 CONTRACT_ADDRESSES = {
     # Main Ethereum network
     '1': {
-        "DEVISE_RENTAL": "",
-        "DEVISE_TOKEN": "",
-        "DEVISE_TOKEN_SALE": ""
+        "DEVISE_RENTAL": "0xF08C62A99318277DE9Cc5699D6904032Cb598199",
+        "DEVISE_TOKEN": "0xc2E71fdbFdd9e967D49B99CD288164e40e15992E",
+        "DEVISE_TOKEN_SALE": "0xdB1548455e29c08377F0999Db2aF55F65758c514"
     },
     # Rinkeby test network
     '4': {

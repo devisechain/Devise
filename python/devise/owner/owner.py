@@ -16,6 +16,10 @@ class DeviseOwner(BaseDeviseClient):
     This is the base class for all smart contract operations from Pit.AI (owner of the smart contract).
     """
 
+    def get_master_nodes(self):
+        """returns a list of all authorized master nodes"""
+        return self._rental_contract.functions.getMasterNodes().call()
+
     @costs_gas
     def set_historical_data_fee(self, tokens):
         """
@@ -41,3 +45,13 @@ class DeviseOwner(BaseDeviseClient):
         Updates the internal state of the contract
         """
         return self._transact(self._rental_contract.functions.updateLeaseTerms(), {"from": self.address})
+
+    @costs_gas
+    def add_master_node(self, address):
+        """Authorizes an address to perform the master node role"""
+        return self._transact(self._rental_contract.functions.addMasterNode(address), {"from": self.address})
+
+    @costs_gas
+    def remove_master_node(self, address):
+        """Unauthorizes an address to perform the master node role"""
+        return self._transact(self._rental_contract.functions.removeMasterNode(address), {"from": self.address})

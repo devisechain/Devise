@@ -15,12 +15,13 @@ from getpass import getpass
 from pathlib import Path
 
 import rlp
+import web3
 from eth_account import Account
 from eth_account.internal.transactions import serializable_unsigned_transaction_from_dict, encode_transaction
 from eth_keyfile import create_keyfile_json
 from ledgerblue.commException import CommException
 from web3 import Web3
-from web3.gas_strategies.time_based import medium_gas_price_strategy
+from web3.gas_strategies.time_based import fast_gas_price_strategy
 from web3.middleware import geth_poa_middleware
 from web3.providers import HTTPProvider
 
@@ -157,7 +158,7 @@ class BaseEthereumClient(object):
         self.w3.middleware_stack.inject(geth_poa_middleware, layer=0)
 
         # Automatically determine necessary gas based on 5min to mine avg time
-        self.w3.eth.setGasPriceStrategy(medium_gas_price_strategy)
+        self.w3.eth.setGasPriceStrategy(fast_gas_price_strategy)
 
     def _init_credentials(self, key_file, private_key, account, password, auth_type):
         """
@@ -298,7 +299,7 @@ class BaseEthereumClient(object):
 
     def _wait_for_receipt(self, tx_hash):
         """Blocks until the transaction receipt is mined"""
-        return self.w3.eth.waitForTransactionReceipt(tx_hash)
+        return self.w3.eth.waitForTransactionReceipt(tx_hash, timeout=60)
 
     def _transact(self, function_call=None, transaction=None):
         """Transaction utility: builds a transaction and signs it with private key, or uses native transactions with
@@ -314,24 +315,26 @@ class BaseEthereumClient(object):
             password = self._password or getpass("Password to decrypt keystore file %s: " % self.account)
             private_key = self._get_private_key(self._key_file, password)
 
-        # get the nonce for the current address
-        nonce = self.w3.eth.getTransactionCount(self.address)
         # Build a transaction to sign
         gas_buffer = 100000
         # Estimate gas cost
         if transaction is None:
             transaction = {}
+
+        auto_gas_price = self.w3.eth.generateGasPrice()
+        user_gas_price = transaction.get('gasPrice')
         transaction.update({
-            'nonce': nonce,
+            'nonce': transaction.get("nonce", self.w3.eth.getTransactionCount(self.address)),
             'gas': 4000000,
-            'gasPrice': self.w3.eth.generateGasPrice()
+            'gasPrice': auto_gas_price
         })
         if function_call:
             transaction = function_call.buildTransaction(transaction)
 
         gas_limit = self.w3.eth.estimateGas(transaction) + gas_buffer
         transaction.update({
-            'gas': gas_limit
+            'gas': gas_limit,
+            'gasPrice': user_gas_price if user_gas_price is not None else auto_gas_price
         })
 
         if 'from' in transaction:
@@ -350,7 +353,16 @@ class BaseEthereumClient(object):
             tx_hash = self.w3.eth.sendRawTransaction(encoded_transaction)
 
         self.logger.info("Submitted transaction %s, waiting for transaction receipt..." % tx_hash.hex())
-        tx_receipt = self._wait_for_receipt(tx_hash)
+        tx_receipt = None
+        while not tx_receipt:
+            try:
+                tx_receipt = self._wait_for_receipt(tx_hash)
+            except web3.utils.threads.Timeout:
+                self.logger.warning("Transaction still pending after 1 minute, waiting some more...")
+
+        self.logger.info("Gas used: %s at gas price of %.2f gwei (%.8f ether)" % (
+            tx_receipt.get("gasUsed"), self.w3.fromWei(transaction.get("gasPrice"), 'gwei'),
+            self.w3.fromWei(tx_receipt.get("gasUsed") * transaction.get("gasPrice"), 'ether')))
 
         return hasattr(tx_receipt, "status") and tx_receipt["status"] == 1
 

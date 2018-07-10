@@ -63,3 +63,13 @@ deploy_pypi_test:
 	cd python && python3 setup.py clean sdist upload -r testpypi
 	rm python/README.rst
 
+docker_build:
+	cd python && docker build --no-cache -t devise:latest .
+
+docker_tag:
+	cd python && docker tag devise:latest devisechain/python:1.1
+	cd python && docker tag devise:latest devisechain/python:latest
+
+docker_push:
+	docker push devisechain/python:latest
+	docker push devisechain/python:1.1

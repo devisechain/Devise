@@ -3,7 +3,7 @@ pragma solidity ^0.4.19;
 
 contract LeptonWarehouse {
     struct LeptonPrice {
-        string lepton;
+        bytes20 lepton;
         uint incrementalUsefulness;
     }
 
@@ -18,37 +18,12 @@ contract LeptonWarehouse {
 
     /// @notice Get the lepton and incremental usefulness at the specified index
     /// @param index the index for which to return the lepton and incremental usefulness
-    /// @return (string leptonHash, uint incremental_usefulness * 1e9)
-    function getLepton(uint index) public returns (bytes20, bytes20, uint) {
-        uint e = leptonPrices[index].incrementalUsefulness;
-        bytes20 sl = stringToBytes20Low(leptonPrices[index].lepton);
-        bytes20 sh = stringToBytes20High(leptonPrices[index].lepton);
-        return (sh, sl, e);
+    /// @return (bytes20 leptonHash, uint incremental_usefulness * 1e9)
+    function getLepton(uint index) public returns (bytes20, uint) {
+        return (leptonPrices[index].lepton, leptonPrices[index].incrementalUsefulness);
     }
 
-    function stringToBytes20High(string memory source) private returns (bytes20 result) {
-        bytes memory tempEmptyStringTest = bytes(source);
-        if (tempEmptyStringTest.length == 0) {
-            return 0x0;
-        }
-
-        assembly {
-            result := mload(add(source, 52))
-        }
-    }
-
-    function stringToBytes20Low(string memory source) private returns (bytes20 result) {
-        bytes memory tempEmptyStringTest = bytes(source);
-        if (tempEmptyStringTest.length == 0) {
-            return 0x0;
-        }
-
-        assembly {
-            result := mload(add(source, 32))
-        }
-    }
-
-    function addLeptonEx(string _lepton, uint _usefulness) internal {
+    function addLeptonEx(bytes20 _lepton, uint _usefulness) internal {
         LeptonPrice memory spNew = LeptonPrice(_lepton, _usefulness);
         leptonPrices.push(spNew);
     }

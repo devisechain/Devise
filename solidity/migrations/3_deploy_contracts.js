@@ -23,6 +23,7 @@ module.exports = function (deployer, network, accounts) {
                         const rentalProxy = await DeviseRentalImpl.at(proxy.address);
                         await rentalProxy.setEscrowWallet(escrowWallet);
                         await rentalProxy.setRevenueWallet(revenueWallet);
+                        await rentalProxy.addMasterNode(pitai);
                     });
                 });
             });

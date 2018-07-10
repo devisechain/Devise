@@ -146,13 +146,14 @@ class RentalContract(BaseDeviseClient):
         leptons = []
         prev_hash = None
         for i in range(count):
-            lepton_hash2, lepton_hash1, contract_iu = self._rental_contract.functions.getLepton(i).call()
+            lepton_hash, contract_iu = self._rental_contract.functions.getLepton(i).call()
+            lepton_hash = lepton_hash.hex()
             leptons.append({
-                "hash": lepton_hash1 + lepton_hash2,
+                "hash": lepton_hash,
                 "previous_hash": prev_hash,
                 "incremental_usefulness": contract_iu / IU_PRECISION
             })
-            prev_hash = lepton_hash1 + lepton_hash2
+            prev_hash = lepton_hash
 
         return leptons
 

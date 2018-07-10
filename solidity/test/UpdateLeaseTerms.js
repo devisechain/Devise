@@ -48,20 +48,20 @@ async function setupFixtures() {
     rental = DeviseRental_v1.at(proxy.address);
     await rental.setEscrowWallet(escrowWallet);
     await rental.setRevenueWallet(revenueWallet);
-
+    await rental.addMasterNode(pitai);
     const escrow_cap = 1000000000000000000 * microDVZ;
     await token.approve(rental.address, escrow_cap, {from: escrowWallet});
 
     // test addLepton can't be called prior to authorize
-    await assertRevert(rental.addLepton(leptons[0], 1000000 * (3)));
+    await assertRevert(rental.addLepton(leptons[0], '', 1000000 * (3)));
     await estor.authorize(proxy.address);
     // Pit.AI adds leptons to rental contract
-    await rental.addLepton(leptons[0], 1000000 * (3));
-    await rental.addLepton(leptons[1], 1000000 * (3));
-    await rental.addLepton(leptons[2], 1000000 * (2));
-    await rental.addLepton(leptons[3], 1000000 * (2));
-    await rental.addLepton(leptons[4], 1000000 * (1));
-    await rental.addLepton(leptons[5], 1000000 * (1));
+    await rental.addLepton(leptons[0], '', 1000000 * (3));
+    await rental.addLepton(leptons[1], leptons[0], 1000000 * (3));
+    await rental.addLepton(leptons[2], leptons[1], 1000000 * (2));
+    await rental.addLepton(leptons[3], leptons[2], 1000000 * (2));
+    await rental.addLepton(leptons[4], leptons[3], 1000000 * (1));
+    await rental.addLepton(leptons[5], leptons[4], 1000000 * (1));
     // Some clients buy tokens and approve transfer to rental contract
     const ether_amount = 3000;
     await Promise.all(clients.map(async client => await tokensale.sendTransaction({
@@ -187,6 +187,7 @@ contract("UpdateLeaseTerms", function () {
         let dues = await getProratedDues(10);
         for (let i = 0; i < 6; i++) {
             const balance = (await rental.getAllowance.call({from: client})).toNumber();
+            assert.equal((await rental.getCurrentTermSeats.call({from: client})).toNumber(), 10);
             // Add monthly dues every month after lease month
             if (i > 0) {
                 const price = (await rental.getRentPerSeatCurrentTerm.call()).toNumber() * 10;
@@ -271,7 +272,7 @@ contract("UpdateLeaseTerms", function () {
         const priceMonth1 = (await rental.getRentPerSeatCurrentTerm.call()).toNumber();
         const usefulness = Math.floor((await rental.getTotalIncrementalUsefulness()).toNumber() / 1000000);
         assert.equal((await rental.getIndicativeRentPerSeatNextTerm.call()).toNumber(), priceMonth1);
-        await rental.addLepton(leptons[6], 1000000 * (1));
+        await rental.addLepton(leptons[6], leptons[5], 1000000 * (1));
         assert.equal(Math.floor((await rental.getTotalIncrementalUsefulness()).toNumber() / 1000000), usefulness + 1);
         assert.equal((await rental.getRentPerSeatCurrentTerm.call()).toNumber(), priceMonth1);
 
@@ -313,6 +314,7 @@ contract("UpdateLeaseTerms", function () {
         await rental.leaseAll(client_bid, 10, {from: client});
         assert.equal((await rental.getNumberOfRenters.call()).toNumber(), 6);
         assert.equal((await rental.getSeatsAvailable.call()).toNumber(), numSeats - 10);
+        assert.equal((await rental.getCurrentTermSeats.call({from: client})).toNumber(), 10);
 
         // Jump forward to next month
         let d = timestampToDate(web3.eth.getBlock(web3.eth.blockNumber).timestamp);
@@ -325,6 +327,7 @@ contract("UpdateLeaseTerms", function () {
         for (let i = 0; i < numRenters; i++) {
             const renter = await rental.getRenter.call(i);
             assert.include(goodClients, renter);
+            assert.equal((await rental.getCurrentTermSeats.call({from: renter})).toNumber(), 10);
         }
     });
 
@@ -504,7 +507,7 @@ contract("UpdateLeaseTerms", function () {
         assert.equal(numLeptons, 6);
         for (let i = 0; i < numLeptons; i++) {
             const lepton = await rental.getLepton(i);
-            assert.equal(lepton[1] + lepton[0], leptons[i]);
+            assert.equal(lepton[0], leptons[i]);
         }
     });
 
@@ -553,5 +556,36 @@ contract("UpdateLeaseTerms", function () {
         const idx = moment([2018, 1, 1]).diff(moment(new Date()), 'months', true);
         assert.isAbove(leaseTerm, idx);
         assert.equal(publicLeaseTerm, leaseTerm);
+    });
+
+    it("Clients can get in on a subsequent term if they raise the price enough", async () => {
+        // Client 1 gets all the seats this term
+        const leaseTerm1 = (await rental.getCurrentLeaseTerm.call()).toNumber();
+        assert.equal((await rental.seatsAvailable.call()).toNumber(), 100);
+        assert.equal((await rental.getCurrentTermSeats.call({from: clients[0]})).toNumber(), 0);
+        assert.equal((await rental.getPricePerBitCurrentTerm.call()).toNumber(), 1000 * microDVZ);
+        await rental.provision(5000000 * microDVZ, {from: clients[0]});
+        await rental.leaseAll(1000 * microDVZ, 100, {from: clients[0]});
+        assert.equal((await rental.seatsAvailable.call()).toNumber(), 0);
+
+        // Client 2 bids up the price to get seats next term, but gets none this term
+        await rental.provision(12 * 4000 * 100 * microDVZ, {from: clients[1]});
+        await rental.leaseAll(2000 * microDVZ, 100, {from: clients[1]});
+        // price went up next term
+        assert.equal((await rental.getIndicativePricePerBitNextTerm.call()).toNumber(), 2000 * microDVZ);
+        // client 1 has seats this term and 0 seats next term
+        assert.equal((await rental.getCurrentTermSeats.call({from: clients[0]})).toNumber(), 100);
+        assert.equal((await rental.getNextTermSeats.call({from: clients[0]})).toNumber(), 0);
+        // client 2 has no seats this term but gets seats next term
+        assert.equal((await rental.getCurrentTermSeats.call({from: clients[1]})).toNumber(), 0);
+        assert.equal((await rental.getNextTermSeats.call({from: clients[1]})).toNumber(), 100);
+        // Next month, make sure current term seats are correct
+        let d = timestampToDate(web3.eth.getBlock(web3.eth.blockNumber).timestamp);
+        let daysInMonth = new Date(d.getYear(), d.getMonth() + 1, 0).getDate();
+        await timeTravel(86400 * (2 + daysInMonth - d.getDate()));
+        const leaseTerm2 = (await rental.getCurrentLeaseTerm.call()).toNumber();
+        assert.equal(leaseTerm2, leaseTerm1 + 1);
+        assert.equal((await rental.getCurrentTermSeats.call({from: clients[0]})).toNumber(), 0);
+        assert.equal((await rental.getCurrentTermSeats.call({from: clients[1]})).toNumber(), 100);
     });
 });

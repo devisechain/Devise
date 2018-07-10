@@ -42,7 +42,7 @@ contract DeviseEternalStorage is GroveBid, LeptonWarehouse {
     }
 
     // LeptonWarehouse related interfaces
-    function addLepton(string _lepton, uint _usefulness) public onlyAuthorized {
+    function addLepton(bytes20 _lepton, uint _usefulness) public onlyAuthorized {
         addLeptonEx(_lepton, _usefulness);
     }
 }

@@ -81,6 +81,7 @@ async function setupFixtures() {
     rentalProxy = await DeviseRentalImpl.at(proxy.address);
     await rentalProxy.setEscrowWallet(escrowWallet);
     await rentalProxy.setRevenueWallet(revenueWallet);
+    await rentalProxy.addMasterNode(pitai);
     rentalProxy_v2 = await DeviseRentalImplV2.at(proxy.address);
     assert.equal(proxy.address, rentalProxy.address);
     assert.equal(proxy.address, rentalProxy_v2.address);
@@ -165,7 +166,7 @@ function powerUserTestAsArray(testTitle, i) {
 function getSha1Hash(i) {
     const hash = crypto.createHash('sha1');
     hash.update(i);
-    return hash.digest('hex');
+    return '0x' + hash.digest('hex');
 }
 
 let leptons = [];
@@ -177,8 +178,10 @@ let totalUsefulness = 0;
 function addLeptonAsArray(testTitle, i) {
     it(testTitle + (i + 1), async function () {
         let str1 = leptons[i];
+        const prevLepton = i > 0 ? leptons[i - 1] : '';
         let usefulness1 = usefulnessSet[i];
-        const tx = await rentalProxy.addLepton(str1, usefulness1, {from: pitai});
+        const numLeptons = (await rentalProxy.getNumberOfLeptons()).toNumber();
+        const tx = await rentalProxy.addLepton(str1, prevLepton, usefulness1, {from: pitai});
         let gas = tx.receipt.gasUsed;
         console.log("Gas used: ", gas);
         let cost = gas * gasPrice * ethPrice / 10 ** 9;
@@ -490,7 +493,7 @@ contract("DeviseRentalStatic2", () => {
     it('master node can add lepton', async function () {
         let str1 = leptons[0];
         let usefulness1 = usefulnessSet[0];
-        const tx = await rentalProxy_v2.addLepton(str1, usefulness1, {from: clients[0]});
+        const tx = await rentalProxy_v2.addLepton(str1, '', usefulness1, {from: clients[0]});
         let gas = tx.receipt.gasUsed;
         console.log("Gas used: ", gas);
         let cost = gas * gasPrice * ethPrice / 10 ** 9;
@@ -500,13 +503,13 @@ contract("DeviseRentalStatic2", () => {
     it('owner cannot add lepton after upgrade', async function () {
         let str1 = leptons[0];
         let usefulness1 = usefulnessSet[0];
-        await assertRevert(rentalProxy_v2.addLepton(str1, usefulness1, {from: pitai}));
+        await assertRevert(rentalProxy_v2.addLepton(str1, '', usefulness1, {from: pitai}));
     });
 
     it('The master node can add lepton after upgrade', async function () {
         let str1 = leptons[0];
         let usefulness1 = usefulnessSet[0];
-        await rentalProxy_v2.addLepton(str1, usefulness1, {from: clients[0]});
+        await rentalProxy_v2.addLepton(str1, '', usefulness1, {from: clients[0]});
     });
 });
 

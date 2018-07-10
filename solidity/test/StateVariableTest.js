@@ -213,6 +213,7 @@
             rentalProxy = await DeviseRentalImpl.at(proxy.address);
             await rentalProxy.setEscrowWallet(escrowWallet);
             await rentalProxy.setRevenueWallet(revenueWallet);
+            await rentalProxy.addMasterNode(pitai);
         });
 
         it("The power user application should pass if the client has 1M tokens", async () => {
@@ -241,7 +242,7 @@
             const dvz_amount = (await token.balanceOf(client)).toNumber();
             assert.isBelow(dvz_amount, millionDVZ * microDVZ);
             await token.approve(rentalProxy.address, dvz_amount, {from: client});
-            await rentalProxy.addLepton(leptons[0], 1000000 * 10);
+            await rentalProxy.addLepton(leptons[0], '', 1000000 * 10);
             const powerUserMin = (await rentalProxy.getPowerUserMinimum()).toNumber();
             await rentalProxy.provision(powerUserMin - 1, {from: client});
             await rentalProxy.applyForPowerUser({from: client});
@@ -264,12 +265,12 @@
             const status = await rentalProxy.isPowerUser.call({from: client});
             assert.isTrue(status);
             // Pit.AI adds leptons to rental contract
-            await rentalProxy.addLepton(leptons[0], 1000000 * (300));
-            await rentalProxy.addLepton(leptons[1], 1000000 * (300));
-            await rentalProxy.addLepton(leptons[2], 1000000 * (200));
-            await rentalProxy.addLepton(leptons[3], 1000000 * (200));
-            await rentalProxy.addLepton(leptons[4], 1000000 * (100));
-            await rentalProxy.addLepton(leptons[5], 1000000 * (100));
+            await rentalProxy.addLepton(leptons[0], '', 1000000 * (300));
+            await rentalProxy.addLepton(leptons[1], leptons[0], 1000000 * (300));
+            await rentalProxy.addLepton(leptons[2], leptons[1], 1000000 * (200));
+            await rentalProxy.addLepton(leptons[3], leptons[2], 1000000 * (200));
+            await rentalProxy.addLepton(leptons[4], leptons[3], 1000000 * (100));
+            await rentalProxy.addLepton(leptons[5], leptons[4], 1000000 * (100));
             const pumin = (await rentalProxy.getPowerUserMinimum.call()).toNumber() / microDVZ;
             assert.isAbove(pumin, 10 ** 6);
             assert.isAbove(pumin, dvz_amount / microDVZ);
@@ -290,9 +291,9 @@
             await token.approve(rentalProxy.address, dvz_amount, {from: client});
             await rentalProxy.provision(dvz_amount, {from: client});
             // add leptons to rental contract
-            await rentalProxy.addLepton(leptons[0], 1000000 * 500);
-            await rentalProxy.addLepton(leptons[1], 1000000 * 500);
-            await rentalProxy.addLepton(leptons[2], 1000000 * 500);
+            await rentalProxy.addLepton(leptons[0], '', 1000000 * 500);
+            await rentalProxy.addLepton(leptons[1], leptons[0], 1000000 * 500);
+            await rentalProxy.addLepton(leptons[2], leptons[1], 1000000 * 500);
             const pumin = (await rentalProxy.getPowerUserMinimum.call()).toNumber() / microDVZ;
             assert.isAbove(pumin, dvz_amount / microDVZ);
             await rentalProxy.applyForPowerUser({from: client});
@@ -416,6 +417,7 @@
             rentalProxy = await DeviseRentalImpl.at(proxy.address);
             await rentalProxy.setEscrowWallet(escrowWallet);
             await rentalProxy.setRevenueWallet(revenueWallet);
+            await rentalProxy.addMasterNode(pitai);
         });
 
         it("Total seats per address should be settable", async () => {
