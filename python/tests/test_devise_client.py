@@ -309,7 +309,7 @@ class TestDeviseClient(object):
             assert download_mock.call_count == 1
             url = download_mock.call_args[0][0]
             assert url.startswith(
-                'https://api.pit.ai/v1/devisechain/latest_weights?address=%s&signature=' % client.address)
+                'https://api.devisechain.io/v1/devisechain/latest_weights?address=%s&signature=' % client.address)
             assert file_name == 'devise_latest_weights_20180608.zip'
         finally:
             os.unlink(file_name)
@@ -321,7 +321,7 @@ class TestDeviseClient(object):
         url = download_mock.call_args[0][0]
         file_name = download_mock.call_args[0][1]
         assert url.startswith(
-            'https://api.pit.ai/v1/devisechain/historical_weights?address=%s&signature=' % client.address)
+            'https://api.devisechain.io/v1/devisechain/historical_weights?address=%s&signature=' % client.address)
         assert file_name == 'devise_historical_weights.tar'
 
     @mock.patch("devise.clients.api.RentalAPI._download")
@@ -331,7 +331,7 @@ class TestDeviseClient(object):
         url = download_mock.call_args[0][0]
         file_name = download_mock.call_args[0][1]
         assert url.startswith(
-            'https://api.pit.ai/v1/devisechain/historical_returns?address=%s&signature=' % client.address)
+            'https://api.devisechain.io/v1/devisechain/historical_returns?address=%s&signature=' % client.address)
         assert file_name == 'devise_historical_returns.tar'
 
     def test__download(self, client):
