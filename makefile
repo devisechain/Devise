@@ -67,9 +67,9 @@ docker_build:
 	cd python && docker build --no-cache -t devise:latest .
 
 docker_tag:
-	cd python && docker tag devise:latest devisechain/python:1.1
+	cd python && docker tag devise:latest devisechain/python:1.2
 	cd python && docker tag devise:latest devisechain/python:latest
 
 docker_push:
 	docker push devisechain/python:latest
-	docker push devisechain/python:1.1
+	docker push devisechain/python:1.2
