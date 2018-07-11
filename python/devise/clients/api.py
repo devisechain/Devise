@@ -22,7 +22,7 @@ from eth_account.messages import defunct_hash_message
 
 from devise.base import BaseDeviseClient
 
-API_ROOT = os.environ.get('API_ROOT_URL', 'https://api.pit.ai')
+API_ROOT = os.environ.get('API_ROOT_URL', 'https://api.devisechain.io')
 
 
 class RentalAPI(BaseDeviseClient):
