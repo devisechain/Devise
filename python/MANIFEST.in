@@ -1,2 +1,3 @@
 include devise/abi/*.json
 include deps/*.tgz
+include deps/*.whl

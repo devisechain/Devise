@@ -21,8 +21,6 @@ The easiest way to install the devise repo is from PyPi:
 
     $ pip install devise
 
-Note: On Windows, we currently recommend using our preconfigured Docker image (see below)
-
 Alternatively, you may clone this repo and install it:
 
 .. code-block:: text
