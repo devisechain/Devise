@@ -11,15 +11,16 @@
 import csv
 import io
 import os
-import shutil
-import tempfile
+import uuid
 from collections import OrderedDict
 from getpass import getpass
 from urllib.parse import urlencode
 from zipfile import ZipFile
 
+import requests
 from eth_account.messages import defunct_hash_message
 
+import devise
 from devise.base import BaseDeviseClient
 
 API_ROOT = os.environ.get('API_ROOT_URL', 'https://api.devisechain.io')
@@ -73,11 +74,15 @@ class RentalAPI(BaseDeviseClient):
 
     def _download(self, url, local_file_name):
         """Downloads the URL specified as the local file name specified"""
-        import urllib.request
-        req = urllib.request.Request(url, headers={'User-Agent': 'DevisePythonWrapper/1.0.0'})
+        req = requests.get(url,
+                           headers={'User-Agent': 'DevisePythonWrapper/{version}'.format(version=devise.__version__)})
+        if req.status_code != 200:
+            raise Exception("Unable to download (%s): %s" % (req.status_code, req.text))
 
-        with urllib.request.urlopen(req) as response, open(local_file_name, 'wb') as out_file:
-            shutil.copyfileobj(response, out_file)
+        with open(local_file_name, 'wb') as out_file:
+            for chunk in req.iter_content(chunk_size=1024):
+                if chunk:  # filter out keep-alive new chunks
+                    out_file.write(chunk)
 
     def _get_latest_weights_date_from_contents(self, latest_weights_file):
         """Gets the last available date from the latest weights file"""
@@ -90,12 +95,12 @@ class RentalAPI(BaseDeviseClient):
         """Downloads the last weights available for for each lepton in the blockchain"""
         api_url = API_ROOT + self.get_signed_api_url('/v1/devisechain/latest_weights')
         self.logger.info("Downloading %s", api_url)
-        with tempfile.NamedTemporaryFile() as temp:
-            self._download(api_url, temp.name)
-            content_date = self._get_latest_weights_date_from_contents(temp.name)
-            file_name = 'devise_latest_weights_{content_date}.zip'.format(content_date=content_date)
-            shutil.copy(temp.name, file_name)
-            return file_name
+        unique_filename = uuid.uuid4().hex
+        self._download(api_url, unique_filename)
+        content_date = self._get_latest_weights_date_from_contents(unique_filename)
+        file_name = 'devise_latest_weights_{content_date}.zip'.format(content_date=content_date)
+        os.rename(unique_filename, file_name)
+        return file_name
 
     def download_historical_weights(self):
         """Downloads a historical archive with all the weights calculated for each lepton in the blockchain

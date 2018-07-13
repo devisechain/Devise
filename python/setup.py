@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import io
 import os
+import re
 import subprocess
 import sys
 
@@ -17,33 +18,36 @@ except:
     readme = ''
 
 
-class install_devise_dependencies():
+def install_devise_dependencies():
     print("Installing platform specific wheels...")
     try:
         # For windows, try to install one of the pre-built binary wheels
-        subprocess.check_call(
-            [sys.executable, '-m', 'pip', 'install', '--find-links=deps/', 'toolz==0.9.0'])
-        subprocess.check_call(
-            [sys.executable, '-m', 'pip', 'install', '--no-index', '--find-links=deps/', 'cytoolz==0.9.0.1'])
-        subprocess.check_call(
-            [sys.executable, '-m', 'pip', 'install', '--no-index', '--find-links=deps/', 'lru_dict==1.1.6'])
+        subprocess.call([sys.executable, '-m', 'pip', 'install', '--find-links=deps/', 'toolz==0.9.0'])
+        subprocess.call([sys.executable, '-m', 'pip', 'install', '--no-index', '--find-links=deps/', 'cytoolz'])
+        subprocess.call([sys.executable, '-m', 'pip', 'install', '--no-index', '--find-links=deps/', 'lru_dict'])
+        subprocess.call([sys.executable, '-m', 'pip', 'install', '--no-index', '--find-links=deps/', 'pysha3'])
+        subprocess.call([sys.executable, '-m', 'pip', 'install', '--no-index', '--find-links=deps/', 'hidapi'])
     except:
         pass
 
     # Install ledger blue
     print("Installing custom dependencies...")
-    subprocess.check_call(
-        [sys.executable, '-m', 'pip', 'install', 'deps/blue_loader_python.tgz'])
+    subprocess.check_call([sys.executable, '-m', 'pip', 'install', "--find-links=deps/", "ledgerblue==0.1.18"])
 
 
 def devise_setup(**kwargs):
+    """Install prerequisites first then run the rest"""
     install_devise_dependencies()
     setup(**kwargs)
 
 
+# Get our current package version from the devise module
+with io.open('devise/__init__.py', 'rt', encoding='utf8') as f:
+    version = re.search(r'__version__ = \'(.*?)\'', f.read()).group(1)
+
 devise_setup(name='devise',
              maintainer='Devise Foundation',
-             version='1.3',
+             version=version,
              license='GPL-3',
              description='Devise: An Ethereum Marketplace for Engineering Better Representations of Financial Markets',
              url='https://github.com/devisechain/devise',

@@ -300,16 +300,15 @@ class TestDeviseClient(object):
         master_node.add_lepton(hashlib.sha1("some lepton".encode('utf8')).hexdigest(), None, 1.5123456789123456789)
         assert client.indicative_price_per_bit_next_term == 1000
 
-    @mock.patch("devise.clients.api.RentalAPI._download")
+    @mock.patch("devise.clients.api.RentalAPI.get_signed_api_url", return_value='')
     @mock.patch("devise.clients.api.RentalAPI._get_latest_weights_date_from_contents", return_value='20180608')
-    def test_download_latest_weights(self, _get_date_mock, download_mock, client):
+    def test_download_latest_weights(self, _get_date_mock, signed_url_mock, client):
         file_name = client.download_latest_weights()
         assert os.path.exists(file_name)
         try:
-            assert download_mock.call_count == 1
-            url = download_mock.call_args[0][0]
-            assert url.startswith(
-                'https://api.devisechain.io/v1/devisechain/latest_weights?address=%s&signature=' % client.address)
+            assert signed_url_mock.call_count == 1
+            url = signed_url_mock.call_args[0][0]
+            assert url == '/v1/devisechain/latest_weights'
             assert file_name == 'devise_latest_weights_20180608.zip'
         finally:
             os.unlink(file_name)

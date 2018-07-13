@@ -1,5 +1,6 @@
-all: python_test solidity_test
+VERSION = $(shell echo "import devise;print(devise.__version__)" | python)
 
+all: python_test solidity_test
 
 python_test: solidity_compile solidity_migrate setup_python
 	@echo Running python tests
@@ -67,9 +68,9 @@ docker_build:
 	cd python && docker build --no-cache -t devise:latest .
 
 docker_tag:
-	cd python && docker tag devise:latest devisechain/python:1.3
+	cd python && docker tag devise:latest devisechain/python:$(VERSION)
 	cd python && docker tag devise:latest devisechain/python:latest
 
 docker_push:
 	docker push devisechain/python:latest
-	docker push devisechain/python:1.3
+	docker push devisechain/python:$(VERSION)
