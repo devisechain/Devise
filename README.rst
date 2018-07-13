@@ -29,13 +29,6 @@ Alternatively, you may clone this repo and install it:
     $ cd Devise/python
     $ pip install .
 
-We also provide a Docker image on Docker hub for your convenience:
-
-.. code-block:: text
-
-    $ docker run -ti -p 127.0.0.1:3477:3477 -h localhost -v ~/.devise/:/home/ubuntu/.devise/ devisechain/python
-
-The corresponding Dockerfile can be found in this repo under the python directory.
 
 For more detailed installation instructions, and for information on platform specific system dependencies, please consult our `Installation Guide <https://github.com/devisechain/Devise/wiki/8.-Installation-Guide>`_
 
