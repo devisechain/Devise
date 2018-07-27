@@ -1,0 +1,7 @@
+{
+    "MAINNET": "https://mainnet.infura.io/ZQl920lU4Wyl6vyrND55",
+    "RINKEBY": "https://rinkeby.infura.io/ZQl920lU4Wyl6vyrND55",
+    "DEV1": "https://dev1.devisechain.io",
+    "DEV2": "https://dev2.devisechain.io",
+    "GANACHE": "http://localhost:8545"
+}
