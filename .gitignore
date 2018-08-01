@@ -113,3 +113,4 @@ node_modules
 .node-xmlhttprequest-*-*
 solidity/coverage
 solidity/coverage.json
+!javascript/dist
