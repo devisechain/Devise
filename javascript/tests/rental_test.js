@@ -59,8 +59,8 @@ describe('RentalContractTest', function () {
         assert.equal(ben, account);
     });
     it('total_incremental_usefulness should be above 300', async () => {
-        const totalIU = await contract.total_incremental_usefulness();
-        assert.isAbove(totalIU, 300);
+        const total_iu = await contract.total_incremental_usefulness();
+        assert.isAbove(total_iu, 300);
     });
     it('seats_available should be at most 100', async () => {
         const seats = await contract.seats_available();
@@ -95,8 +95,8 @@ describe('RentalContractTest', function () {
         const leptons = await contract.get_all_leptons();
         assert.isAtLeast(leptons.length, 303);
         assert.equal(leptons[0].hash, '0x392d88d028429d0177d102d9ebd5ff644351c30e');
-        assert.isUndefined(leptons[0].previousHash);
-        assert.equal(leptons[0].incrementalUsefulness, 5.035122);
+        assert.isUndefined(leptons[0].previous_hash);
+        assert.equal(leptons[0].incremental_usefulness, 5.035122);
     });
     it('GetAllClients should return an array of objects', async function () {
         this.timeout(60000);

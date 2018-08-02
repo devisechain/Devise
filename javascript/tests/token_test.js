@@ -14,8 +14,8 @@ describe('DeviseTokenTests', function () {
         assert.equal(cap, 10 * 10 ** 9);
     });
     it('TotalSupply should be non-zero', async () => {
-        const totalSupply = (await token.total_supply()) / 10 ** 6;
-        assert.isAtLeast(totalSupply, 250 * 10 ** 6);
+        const total_supply = (await token.total_supply()) / 10 ** 6;
+        assert.isAtLeast(total_supply, 250 * 10 ** 6);
     });
     it('Allowance should be zero by default', async () => {
         const owner = '0x0';

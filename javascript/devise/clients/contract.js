@@ -9,15 +9,15 @@ class RentalContract extends BaseDeviseClient {
         super(account, nodel_url, network);
     }
 
-    async _has_sufficient_funds(clientAddress, numSeats, limitPrice) {
-        const currentBalance = await this._rental_contract.methods.getAllowance().call({from: clientAddress}) / TOKEN_PRECISION;
-        return limitPrice * this.total_incremental_usefulness() * numSeats <= currentBalance;
+    async _has_sufficient_funds(client_address, num_seats, limit_price) {
+        const current_balance = await this._rental_contract.methods.getAllowance().call({from: client_address}) / TOKEN_PRECISION;
+        return limit_price * this.total_incremental_usefulness() * num_seats <= current_balance;
     }
 
     async get_client_address(address) {
-        const clientAddress = await this._rental_contract.methods.getClientForBeneficiary().call({from: address});
-        if (clientAddress !== '0x0000000000000000000000000000000000000000')
-            return clientAddress;
+        const client_address = await this._rental_contract.methods.getClientForBeneficiary().call({from: address});
+        if (client_address !== '0x0000000000000000000000000000000000000000')
+            return client_address;
     }
 
     async dvz_balance() {
@@ -52,17 +52,17 @@ class RentalContract extends BaseDeviseClient {
         return this._lease_term_to_date_str(idx);
     }
 
-    _lease_term_to_date_str(leaseTermIdx) {
-        if (leaseTermIdx === 0)
+    _lease_term_to_date_str(lease_term_idx) {
+        if (lease_term_idx === 0)
             return undefined;
 
-        let termYear = 2018;
-        while (leaseTermIdx > 12) {
-            termYear++;
-            leaseTermIdx -= 12;
+        let term_year = 2018;
+        while (lease_term_idx > 12) {
+            term_year++;
+            lease_term_idx -= 12;
         }
-        leaseTermIdx++;
-        return leaseTermIdx.toString() + '/' + termYear.toString();
+        lease_term_idx++;
+        return lease_term_idx.toString() + '/' + term_year.toString();
     }
 
     async price_per_bit_current_term() {
@@ -86,8 +86,8 @@ class RentalContract extends BaseDeviseClient {
     }
 
     async total_incremental_usefulness() {
-        const totalIU = await this._rental_contract.methods.getTotalIncrementalUsefulness().call() / IU_PRECISION;
-        return totalIU;
+        const total_iu = await this._rental_contract.methods.getTotalIncrementalUsefulness().call() / IU_PRECISION;
+        return total_iu;
     }
 
     async seats_available() {
@@ -110,8 +110,9 @@ class RentalContract extends BaseDeviseClient {
     }
 
     async client_summary() {
+        let summary;
         try {
-            const summary = await this.get_client_summary(this.address);
+            summary = await this.get_client_summary(this.address);
         }
         catch (err) {
             console.log("No client found for address %s", this.address);
@@ -123,13 +124,17 @@ class RentalContract extends BaseDeviseClient {
     async get_all_leptons() {
         const count = await this._rental_contract.methods.getNumberOfLeptons().call();
         let leptons = [];
-        let prevHash;
+        let prev_hash;
         for (let i = 0; i < count; i++) {
             const lepton = await this._rental_contract.methods.getLepton(i).call();
-            const leptonHash = lepton[0];
-            const contractIU = lepton[1];
-            leptons.push({hash: leptonHash, previousHash: prevHash, incrementalUsefulness: contractIU / IU_PRECISION});
-            prevHash = leptonHash;
+            const lepton_hash = lepton[0];
+            const contract_iu = lepton[1];
+            leptons.push({
+                hash: lepton_hash,
+                previous_hash: prev_hash,
+                incremental_usefulness: contract_iu / IU_PRECISION
+            });
+            prev_hash = lepton_hash;
         }
         return leptons;
     }

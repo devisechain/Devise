@@ -37,10 +37,10 @@ const get_contract_address = function () {
 
 const get_default_node_url = function (network = 'MAINNET') {
     const url = CDN_ROOT + 'network_to_node.json';
-    let NETWORK_TO_NODE;
-    NETWORK_TO_NODE = get_json_sync(url);
+    let network_to_node;
+    network_to_node = get_json_sync(url);
     network = network.toUpperCase();
-    return NETWORK_TO_NODE[network];
+    return network_to_node[network];
 };
 
 class BaseEthereumClient {
@@ -69,14 +69,14 @@ class BaseDeviseClient extends BaseEthereumClient {
     }
 
     async init_contracts() {
-        const tokenABI = get_contract_abi('devise_token');
-        const tokenSaleABI = get_contract_abi('devise_token_sale');
-        const rentalABI = get_contract_abi('devise_rental_proxy');
-        const CONTRACT_ADDRESS = get_contract_address();
-        const networkID = await this._get_network_id();
-        this._token_contract = new this.web3.eth.Contract(tokenABI, CONTRACT_ADDRESS[networkID].DEVISE_TOKEN);
-        this._token_sale_contract = new this.web3.eth.Contract(tokenSaleABI, CONTRACT_ADDRESS[networkID].DEVISE_TOKEN_SALE);
-        this._rental_contract = new this.web3.eth.Contract(rentalABI, CONTRACT_ADDRESS[networkID].DEVISE_RENTAL);
+        const token_abi = get_contract_abi('devise_token');
+        const token_sale_abi = get_contract_abi('devise_token_sale');
+        const rental_abi = get_contract_abi('devise_rental_proxy');
+        const contract_address = get_contract_address();
+        const network_id = await this._get_network_id();
+        this._token_contract = new this.web3.eth.Contract(token_abi, contract_address[network_id].DEVISE_TOKEN);
+        this._token_sale_contract = new this.web3.eth.Contract(token_sale_abi, contract_address[network_id].DEVISE_TOKEN_SALE);
+        this._rental_contract = new this.web3.eth.Contract(rental_abi, contract_address[network_id].DEVISE_RENTAL);
     }
 }
 
