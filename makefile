@@ -18,6 +18,14 @@ solidity_test: unlock_test_owner unlock_test_accounts
 	cd solidity && truffle test
 
 
+javascript_test_jenkins: setup_javacript
+	@echo Running javascript tests
+	cd javascript && MOCHA_FILE=./javascript-test-results.xml ./node_modules/.bin/mocha tests --reporter mocha-junit-reporter
+
+javascript_test: setup_javacript
+	@echo Running javascript tests
+	cd javascript && npm test
+
 solidity_compile: unlock_test_owner
 	@echo Compiling Smart Contracts
 	cd solidity && \
@@ -51,6 +59,10 @@ setup_python:
 	cd python && \
 	pip3 install setuptools -U && \
 	pip3 install .[dev]
+
+setup_javacript:
+	# Install javascript deps
+	cd javascript && npm install --python=/usr/bin/python2.7
 
 setup: setup_solidity setup_python
 

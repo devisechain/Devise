@@ -1,0 +1,37 @@
+{
+  "name": "devise",
+  "version": "1.0.0",
+  "description": "A javascript library for interacting with Devise smart contracts on Ethereum",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "dependencies": {
+    "aggregation": "^1.2.4",
+    "web3": "^1.0.0-beta.35"
+  },
+  "devDependencies": {
+    "babel": "^6.23.0",
+    "babel-cli": "^6.26.0",
+    "babel-loader": "^7.1.5",
+    "babel-plugin-transform-class-properties": "^6.24.1",
+    "babel-plugin-transform-object-rest-spread": "^6.26.0",
+    "chai": "^4.1.2",
+    "mocha": "^5.2.0",
+    "mocha-junit-reporter": "^1.17.0",
+    "webpack": "^4.16.3",
+    "webpack-cli": "^3.1.0",
+    "xmlhttprequest": "^1.8.0"
+  },
+  "scripts": {
+    "clean": "rm -r dist/*",
+    "build_dev": "NODE_ENV=development webpack --mode development --display verbose --display-modules --config webpack.config.js",
+    "build": "NODE_ENV=production webpack --mode production --config webpack.config.js",
+    "test": "mocha tests"
+  },
+  "keywords": [
+    "Devise"
+  ],
+  "author": "Pit.AI Technologies, Inc.",
+  "license": "ISC"
+}
