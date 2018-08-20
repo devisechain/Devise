@@ -12,10 +12,10 @@ contract DeviseRentalImpl is DeviseRentalStorage, RBAC {
     address[] public masterNodes;
     mapping(bytes20 => uint256) public leptons;
 
-    modifier require(bool _condition) {
-        if (!_condition) revert();
-        _;
-    }
+    //    modifier require(bool _condition) {
+    //        if (!_condition) revert();
+    //        _;
+    //    }
 
     modifier onlyOwner() {
         if (msg.sender != owner) revert();
@@ -59,18 +59,34 @@ contract DeviseRentalImpl is DeviseRentalStorage, RBAC {
 
     /// @notice set escrow wallet
     /// @param addr The address of the escrow wallet
-    function setEscrowWallet(address addr) public onlyOwner
-    require(owner != addr && revenueWallet != addr) {
+    function setEscrowWallet(address addr) public onlyOwner {
+        require(owner != addr && revenueWallet != addr);
+        require(escrowWallet != addr);
         escrowWallet = addr;
+        escrowHistory.push(addr);
         WalletChanged("The escrow wallet has been changed to ", escrowWallet);
+    }
+
+    /// @notice get escrow wallet history
+    /// @return an array of addresses
+    function getEscrowHistory() public view returns (address[]) {
+        return escrowHistory;
     }
 
     /// @notice set revenue wallet
     /// @param addr The address of the revenue wallet
-    function setRevenueWallet(address addr) public onlyOwner
-    require(owner != addr && escrowWallet != addr) {
+    function setRevenueWallet(address addr) public onlyOwner {
+        require(owner != addr && escrowWallet != addr);
+        require(revenueWallet != addr);
         revenueWallet = addr;
+        revenueHistory.push(addr);
         WalletChanged("The revenue wallet has been changed to ", revenueWallet);
+    }
+
+    /// @notice get revenue wallet history
+    /// @return an array of addresses
+    function getRevenueHistory() public view returns (address[]) {
+        return revenueHistory;
     }
 
     /// @notice get data contract address
@@ -87,7 +103,9 @@ contract DeviseRentalImpl is DeviseRentalStorage, RBAC {
 
     /// @notice transfers `(_amount)` from the token contract to the internal ledger for use to pay for lease
     /// @param _amount The number of tokens to allow for payment of lease dues
-    function provision(uint _amount) public whenNotPaused require(_amount > 0) require(escrowWallet != 0x0) {
+    function provision(uint _amount) public whenNotPaused {
+        require(_amount > 0);
+        require(escrowWallet != 0x0);
         // bring contract state up to date with the current lease term to calculate current prices and escrow balances
         _updateLeaseTerms();
         token.transferFrom(msg.sender, escrowWallet, _amount);
@@ -141,8 +159,9 @@ contract DeviseRentalImpl is DeviseRentalStorage, RBAC {
 
     /// @notice Get the beneficiary address designated by the `(_client)` to receive the leased data
     /// @param _client the address of the client for which to return the beneficiary
-    function getClientSummary(address _client) public view require(clients[_client].isClient)
+    function getClientSummary(address _client) public view
     returns (address, uint, uint, uint, bool, bool, uint, uint) {
+        require(clients[_client].isClient);
         // bring contract state up to date with the current lease term to calculate current prices and escrow balances
         _updateLeaseTerms();
         Client client = clients[_client];
@@ -212,8 +231,8 @@ contract DeviseRentalImpl is DeviseRentalStorage, RBAC {
     /// @param _lepton A sha1 lepton hash
     /// @param _prevLepton The previous sha1 lepton hash in the chain
     /// @param _incrementalUsefulness The incremental usefulness added by the lepton being added
-    function addLepton(bytes20 _lepton, bytes20 _prevLepton, uint _incrementalUsefulness) public onlyMasterNodes
-    require(_incrementalUsefulness > 0) {
+    function addLepton(bytes20 _lepton, bytes20 _prevLepton, uint _incrementalUsefulness) public onlyMasterNodes {
+        require(_incrementalUsefulness > 0);
         uint numLeptons = permData.getNumberOfLeptons();
         if (numLeptons > 0) {
             var (prevHash,) = permData.getLepton(numLeptons - 1);
@@ -311,6 +330,43 @@ contract DeviseRentalImpl is DeviseRentalStorage, RBAC {
             revert();
     }
 
+    /// Get all bids from the bid grove
+    /// @return address[] bidders, uint8[] seats, uint[] bids
+    function getAllBidders() public view returns (address[] memory bidders, uint8[] memory seats, uint[] memory limitPrices) {
+        // Get number of bids in the grove so we can build our fixed sized memory arrays
+        uint numberOfBids = 0;
+        bytes32 curNode = permData.getIndexMax();
+        bytes32 pNode;
+        while (curNode != 0x0) {
+            var (_client, _bidSeats,) = permData.getNodeValueBid(curNode);
+            if (_bidSeats > 0)
+                numberOfBids++;
+            pNode = permData.getPreviousNode(curNode);
+            curNode = pNode != 0x0 ? pNode : bytes32(0x0);
+        }
+
+        // create fixed sized memory arrays
+        bidders = new address[](numberOfBids);
+        seats = new uint8[](numberOfBids);
+        limitPrices = new uint[](numberOfBids);
+        // populate arrays from grove
+        curNode = permData.getIndexMax();
+        uint idx = 0;
+        while (curNode != 0x0) {
+            var (client, bidSeats, pricePerBit) = permData.getNodeValueBid(curNode);
+            if (bidSeats > 0) {
+                bidders[idx] = client;
+                seats[idx] = bidSeats;
+                limitPrices[idx] = pricePerBit;
+                idx++;
+            }
+            pNode = permData.getPreviousNode(curNode);
+            curNode = pNode != 0x0 ? pNode : bytes32(0x0);
+        }
+
+        return (bidders, seats, limitPrices);
+    }
+
     /// @notice Bid for a number of seats up to a limit price per bit of information
     function leaseAll(uint limitPrice, uint8 _seats) public whenNotPaused returns (bool) {
         // bring contract state up to date with the current lease term to calculate current prices and escrow balances
@@ -349,6 +405,14 @@ contract DeviseRentalImpl is DeviseRentalStorage, RBAC {
         return currentRenters[index];
     }
 
+    /// Get all renter addresses
+    /// @return address[]
+    function getAllRenters() public view returns (address[]) {
+        // bring contract state up to date with the current lease term to calculate current prices and escrow balances
+        _updateLeaseTerms();
+        return currentRenters;
+    }
+
     /// @notice Get the number of clients
     function getNumberOfClients() public view returns (uint) {
         return clientsArray.length;
@@ -358,6 +422,12 @@ contract DeviseRentalImpl is DeviseRentalStorage, RBAC {
     /// @param index the index for which to return the client's address
     function getClient(uint index) public view returns (address) {
         return clientsArray[index];
+    }
+
+    /// Get all client addresses
+    /// @return address[]
+    function getAllClients() public view returns (address[]) {
+        return clientsArray;
     }
 
     /// @notice Get the current number of leptons
@@ -389,6 +459,20 @@ contract DeviseRentalImpl is DeviseRentalStorage, RBAC {
     /// @return (string, string leptonHash, uint incremental_usefulness * 1e9)
     function getLepton(uint index) public view returns (bytes20, uint) {
         return permData.getLepton(index);
+    }
+
+    /// Get all leptons
+    /// @return bytes20[], uint[]
+    function getAllLeptons() public view returns (bytes20[], uint[]) {
+        uint numLeptons = permData.getNumberOfLeptons();
+        bytes20[] memory hashes = new bytes20[](numLeptons);
+        uint[] memory ius = new uint[](numLeptons);
+        for (uint x = 0; x < numLeptons; x++) {
+            var (hash, iu) = permData.getLepton(x);
+            hashes[x] = hash;
+            ius[x] = iu;
+        }
+        return (hashes, ius);
     }
 
     /// @notice Get number of currently available seats for the current lease term
@@ -425,7 +509,8 @@ contract DeviseRentalImpl is DeviseRentalStorage, RBAC {
     }
 
     /// @notice Used by owner to set the usefulness baseline
-    function setUsefulnessBaseline(uint8 dec) public onlyOwner require(dec <= 9) {
+    function setUsefulnessBaseline(uint8 dec) public onlyOwner {
+        require(dec <= 9);
         usefulnessDecimals = dec;
         usefulnessBaseline = uint32(10 ** uint256(usefulnessDecimals));
         IncrementalUsefulnessPrecisionChanged(usefulnessBaseline);
@@ -444,7 +529,8 @@ contract DeviseRentalImpl is DeviseRentalStorage, RBAC {
     }
 
     /// @notice Used by owner to set max percentage of seats occupied by a client
-    function setMaxSeatPercentage(uint amount) public onlyOwner require(amount <= 100) {
+    function setMaxSeatPercentage(uint amount) public onlyOwner {
+        require(amount <= 100);
         maxSeatPercentage = amount;
         maxSeatMultiple = 100 / maxSeatPercentage;
         MaxSeatsPerAddressChanged(maxSeatPercentage);
@@ -538,7 +624,8 @@ contract DeviseRentalImpl is DeviseRentalStorage, RBAC {
         FeeChanged("Power User Minimum", powerUserMinimum);
     }
 
-    function recognizeRevenue(uint256 amount) internal require(revenueWallet != 0x0) {
+    function recognizeRevenue(uint256 amount) internal {
+        require(revenueWallet != 0x0);
         token.transferFrom(escrowWallet, revenueWallet, amount);
     }
 
@@ -622,9 +709,8 @@ contract DeviseRentalImpl is DeviseRentalStorage, RBAC {
         return (year, month, day);
     }
 
-    function deductCurrentTermRent(address _client, uint price, uint seats) internal {
+    function deductCurrentTermRent(address _client, uint price, uint _extraSeats) internal {
         uint decimals = 8;
-        uint _extraSeats = seats - auctionSeats[msg.sender];
         // if the user is not requesing more seats
         if (_extraSeats <= 0)
             return;
@@ -659,6 +745,9 @@ contract DeviseRentalImpl is DeviseRentalStorage, RBAC {
     }
 
     function acceptClientBid(uint _bid, uint8 _seats) internal {
+        // seats are less or the same than current seats, no need to do anything here
+        if (_seats <= auctionSeats[msg.sender])
+            return;
         // This client can also be an existing client
         uint price = max(priceCurrentTerm.pricePerBitOfIU, minimumPricePerBit);
         uint8 _extraSeats = _seats - (auctionSeats[msg.sender] != 0x0 ? auctionSeats[msg.sender] : 0);
@@ -713,11 +802,18 @@ contract DeviseRentalImpl is DeviseRentalStorage, RBAC {
     function updateRentersList() internal {
         // Remove renters who's limit price falls below current price or don't have enough allowance
         for (uint i = 0; i < currentRenters.length; i++) {
-            uint8 extraSeats = clients[currentRenters[i]].seats - auctionSeats[currentRenters[i]];
-            // Client wants more or less seats
-            if (auctionSeats[currentRenters[i]] != clients[currentRenters[i]].seats && seatsAvailable > extraSeats) {
-                seatsAvailable -= extraSeats;
+            // if client requests less seats going forward
+            if (clients[currentRenters[i]].seats < auctionSeats[currentRenters[i]]) {
+                seatsAvailable += auctionSeats[currentRenters[i]] - clients[currentRenters[i]].seats;
                 auctionSeats[currentRenters[i]] = clients[currentRenters[i]].seats;
+            } else {
+                // if client requests more seats going forward
+                uint8 extraSeats = clients[currentRenters[i]].seats - auctionSeats[currentRenters[i]];
+                // Client wants more or less seats
+                if (auctionSeats[currentRenters[i]] != clients[currentRenters[i]].seats && seatsAvailable > extraSeats) {
+                    seatsAvailable -= extraSeats;
+                    auctionSeats[currentRenters[i]] = clients[currentRenters[i]].seats;
+                }
             }
             uint bid = clients[currentRenters[i]].limitPrice;
             uint currentBalance = clients[currentRenters[i]].allowance.balance;
@@ -729,6 +825,7 @@ contract DeviseRentalImpl is DeviseRentalStorage, RBAC {
                 clientsAsRenters[currentRenters[i]] = false;
                 RenterRemoved(currentRenters[i]);
                 removeCurrentRenterByIndex(i);
+                i = i - 1;
             }
         }
         addEligibleRenters(priceCurrentTerm);

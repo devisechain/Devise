@@ -5,7 +5,7 @@
     This is the base class for all owner token operations contract operations
 
     :copyright: © 2018 Pit.AI
-    :license: BSD, see LICENSE for more details.
+    :license: GPLv3, see LICENSE for more details.
 """
 from devise.base import costs_gas
 from devise.clients.token import DeviseToken

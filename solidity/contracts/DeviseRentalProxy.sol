@@ -9,6 +9,8 @@ import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 
 
 contract DeviseRentalProxy is Proxy, DeviseRentalStorage {
+    using SafeMath for uint256;
+
     modifier onlyOwner() {
         require(msg.sender == owner);
         _;
@@ -25,16 +27,18 @@ contract DeviseRentalProxy is Proxy, DeviseRentalStorage {
     }
 
     /// @dev This event will be emitted every time the implementation gets upgraded
-    /// @param version representing the version name of the upgraded implementation
+    /// @param version representing the version number of the upgraded implementation
     /// @param implementation representing the address of the upgraded implementation
-    event Upgraded(string version, address indexed implementation);
+    event Upgraded(uint version, address indexed implementation);
     event ContractPaused();
     event ContractUnpaused();
 
     /// @notice Contract constructor
     /// @param _token The token contract to be accepted to pay for lease dues
     /// @param _dateUtils A valid DateTime contract for date manipulation
-    function DeviseRentalProxy(DeviseToken _token, DateTime _dateUtils, DeviseEternalStorage _permData) public {
+    /// @param _permData A DeviseEternalStorage contract
+    /// @param _totalIncrementalUsefulness The total incremental usefulness for the leptons in DeviseEternalStorage
+    function DeviseRentalProxy(DeviseToken _token, DateTime _dateUtils, DeviseEternalStorage _permData, uint _totalIncrementalUsefulness) public {
         owner = msg.sender;
         token = _token;
         dateUtils = _dateUtils;
@@ -42,6 +46,7 @@ contract DeviseRentalProxy is Proxy, DeviseRentalStorage {
         priceCurrentTerm.pricePerBitOfIU = minimumPricePerBit;
         priceNextTerm.pricePerBitOfIU = minimumPricePerBit;
         seatsAvailable = totalSeats;
+        totalIncrementalUsefulness = _totalIncrementalUsefulness;
     }
 
     /**
@@ -61,13 +66,30 @@ contract DeviseRentalProxy is Proxy, DeviseRentalStorage {
     }
 
     /// @dev Allows the owner to upgrade the current version of the proxy.
-    /// @param version representing the version name of the new implementation to be set.
     /// @param implementation representing the address of the new implementation to be set.
-    function upgradeTo(string version, address implementation) public onlyOwner {
+    function upgradeTo(address implementation) public onlyOwner {
         require(_implementation != implementation);
-        _version = version;
+        if (implVersions[implementation] == 0) {
+            _highestVersion = _highestVersion.add(1);
+            implVersions[implementation] = _highestVersion;
+        }
         _implementation = implementation;
-        Upgraded(version, implementation);
+        implHistory.push(implementation);
+        uint ver = implVersions[implementation];
+        Upgraded(ver, implementation);
+    }
+
+    /// @dev Return two index-aligned arrays with implementation addresses and version numbers
+    /// @return an array of implementation addresses and array of version numbers
+    function getAllImplementations() public view returns (address[], uint[]) {
+        uint len = implHistory.length;
+        address[] memory impl = new address[](len);
+        uint[] memory ver = new uint[](len);
+        for (uint i = 0; i < len; i++) {
+            impl[i] = implHistory[i];
+            ver[i] = implVersions[impl[i]];
+        }
+        return (impl, ver);
     }
 
     /// @dev Gets the address of the current implementation
@@ -78,8 +100,8 @@ contract DeviseRentalProxy is Proxy, DeviseRentalStorage {
 
     /// @dev Gets the version of the current implementation
     /// @return address of the current implementation
-    function version() public view returns (string) {
-        return _version;
+    function version() public view returns (uint) {
+        return implVersions[_implementation];
     }
 
     /// @notice

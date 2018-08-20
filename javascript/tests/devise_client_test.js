@@ -1,22 +1,23 @@
 const chai = require('chai');
 const assert = chai.assert;
 const DeviseClient = require('../devise/clients/client');
+const network = 'ganache';
 
 describe('DeviseClientTest', function () {
     this.timeout(10000);
     let client;
     beforeEach(async () => {
-        client = new DeviseClient(undefined, undefined, 'DEV1');
+        client = new DeviseClient(undefined, undefined, network);
         await client.init_contracts();
     });
     it('Should be able to call cap from DevivseToken', async () => {
-        const cap = (await client.cap()) / 10 ** 6;
+        const cap = await client.cap();
         assert.equal(cap, 10 * 10 ** 9);
     });
     it('Should be able to call opening_time from TokenSale', async () => {
         const opening = await client.opening_time();
         assert.equal(opening.getFullYear(), 2018);
-        assert.equal(opening.getUTCMonth(), 7 - 1);
+        assert.equal(opening.getUTCMonth(), 5 - 1);
         assert.equal(opening.getUTCDate(), 1);
     });
     it('Should be able to call current_lease_term from RentalContract', async () => {

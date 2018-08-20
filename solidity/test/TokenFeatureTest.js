@@ -24,9 +24,9 @@ contract("Token Features Tests", () => {
         const dateTime = await DateTime.deployed();
         const estor = await DeviseEternalStorage.new();
         // Create new upgradeable contract frontend (proxy)
-        proxy = await DeviseRentalBase.new(token.address, dateTime.address, estor.address, {from: pitai});
+        proxy = await DeviseRentalBase.new(token.address, dateTime.address, estor.address, 0, {from: pitai});
         // Set it's implementation version
-        await proxy.upgradeTo('1', (await DeviseRental_v1.new()).address);
+        await proxy.upgradeTo((await DeviseRental_v1.new()).address);
 
         const blockNumber = web3.eth.blockNumber;
         const openingTime = web3.eth.getBlock(blockNumber).timestamp;

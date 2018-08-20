@@ -65,13 +65,13 @@
 
             const dateutils = await DateTime.new({from: pitai});
             const dstore = await DeviseEternalStorage.new({from: pitai});
-            const proxy = await DeviseRentalProxy.new(token.address, dateutils.address, dstore.address, {from: pitai});
+            const proxy = await DeviseRentalProxy.new(token.address, dateutils.address, dstore.address, 0, {from: pitai});
 
             await dstore.authorize(proxy.address, {from: pitai});
 
             const rentalImpl = await DeviseRentalImpl.new({from: pitai});
 
-            await proxy.upgradeTo('1.0', rentalImpl.address, {from: pitai});
+            await proxy.upgradeTo(rentalImpl.address, {from: pitai});
 
             // rentalProxy will have all the interfaces of DeviseRentalImpl contract
             // future function calls are directly from rentalProxy
@@ -83,11 +83,69 @@
             const ew = await rentalProxy.escrowWallet.call();
             assert.notEqual(ew, pitai);
         });
+        it("getEscrowHistory should return an empty array if not set", async () => {
+            const escrowHistory = await rentalProxy.getEscrowHistory();
+            assert.deepEqual(escrowHistory, []);
+        });
+        it("getEscrowHistory should return an array of addresses if set", async () => {
+            await rentalProxy.setEscrowWallet(escrowWallet);
+            const escrowHistory = await rentalProxy.getEscrowHistory();
+            assert.deepEqual(escrowHistory, [escrowWallet]);
+        });
+        it("getEscrowHistory should return an array of more than one address if set multiple times", async () => {
+            await rentalProxy.setEscrowWallet(escrowWallet);
+            await rentalProxy.setEscrowWallet(clients[0]);
+            const escrowHistory = await rentalProxy.getEscrowHistory();
+            assert.deepEqual(escrowHistory, [escrowWallet, clients[0]]);
+        });
+        it("escrowHistory can contain duplicate addresses", async () => {
+            await rentalProxy.setEscrowWallet(escrowWallet);
+            await rentalProxy.setEscrowWallet(clients[0]);
+            await rentalProxy.setEscrowWallet(escrowWallet);
+            const escrowHistory = await rentalProxy.getEscrowHistory();
+            assert.deepEqual(escrowHistory, [escrowWallet, clients[0], escrowWallet]);
+        });
+        it("setEscrowWallet to the same address twice should revert", async () => {
+            await rentalProxy.setEscrowWallet(escrowWallet);
+            await assertRevert(rentalProxy.setEscrowWallet(escrowWallet));
+        });
+        it("setEscrowWallet by non-owner shoudl revert", async () => {
+            await assertRevert(rentalProxy.setEscrowWallet(escrowWallet, {from: escrowWallet}));
+        });
 
         it("Revenue wallet should be different from pitai", async () => {
             await rentalProxy.setRevenueWallet(revenueWallet);
             const rw = await rentalProxy.revenueWallet.call();
             assert.notEqual(rw, pitai);
+        });
+        it("getRevenueHistory should return an empty array if not set", async () => {
+            const revenueHistory = await rentalProxy.getRevenueHistory();
+            assert.deepEqual(revenueHistory, []);
+        });
+        it("getRevenueHistory should return an array of addresses if set", async () => {
+            await rentalProxy.setRevenueWallet(revenueWallet);
+            const revenueHistory = await rentalProxy.getRevenueHistory();
+            assert.deepEqual(revenueHistory, [revenueWallet]);
+        });
+        it("revenueHistory can contain duplicate addresses", async () => {
+            await rentalProxy.setRevenueWallet(revenueWallet);
+            await rentalProxy.setRevenueWallet(clients[0]);
+            await rentalProxy.setRevenueWallet(revenueWallet);
+            const revenueHistory = await rentalProxy.getRevenueHistory();
+            assert.deepEqual(revenueHistory, [revenueWallet, clients[0], revenueWallet]);
+        });
+        it("getRevenueHistory should return an array of more than one address if set multiple times", async () => {
+            await rentalProxy.setRevenueWallet(revenueWallet);
+            await rentalProxy.setRevenueWallet(clients[0]);
+            const revenueHistory = await rentalProxy.getRevenueHistory();
+            assert.deepEqual(revenueHistory, [revenueWallet, clients[0]]);
+        });
+        it("setRevenueWallet to the same address twice should revert", async () => {
+            await rentalProxy.setRevenueWallet(revenueWallet);
+            await assertRevert(rentalProxy.setRevenueWallet(revenueWallet));
+        });
+        it("setRevenueWallet by non-owner should revert", async () => {
+            await assertRevert(rentalProxy.setRevenueWallet(revenueWallet, {from: revenueWallet}));
         });
     });
 
@@ -107,13 +165,13 @@
 
             const dateutils = await DateTime.new({from: pitai});
             const dstore = await DeviseEternalStorage.new({from: pitai});
-            const proxy = await DeviseRentalProxy.new(token.address, dateutils.address, dstore.address, {from: pitai});
+            const proxy = await DeviseRentalProxy.new(token.address, dateutils.address, dstore.address, 0, {from: pitai});
 
             await dstore.authorize(proxy.address, {from: pitai});
 
             const rentalImpl = await DeviseRentalImpl.new({from: pitai});
 
-            await proxy.upgradeTo('1.0', rentalImpl.address, {from: pitai});
+            await proxy.upgradeTo(rentalImpl.address, {from: pitai});
             await tokensale.setRentalProxy(proxy.address);
 
             // rentalProxy will have all the interfaces of DeviseRentalImpl contract

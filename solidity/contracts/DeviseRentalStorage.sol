@@ -7,11 +7,19 @@ import "./DeviseToken.sol";
 
 
 contract DeviseRentalStorage {
-    // Version name of the current implementation
-    string internal _version;
+    // The highest version number among all implementations
+    uint internal _highestVersion;
 
     // Address of the current implementation
     address internal _implementation;
+
+    // A one-to-one mapping from implementation address to
+    // a version number
+    mapping(address => uint) internal implVersions;
+    // A history of all implementations. It is possible to
+    // have duplicate implementations as the same implementation
+    // has been pointed to at different occasions
+    address[] internal implHistory;
 
     struct Allowance {
         uint balance;
@@ -38,7 +46,9 @@ contract DeviseRentalStorage {
     address public owner;
     bool public paused = false;
     address public escrowWallet;
+    address[] internal escrowHistory;
     address public revenueWallet;
+    address[] internal revenueHistory;
 
     uint internal constant GENESIS_YEAR = 2018;
     // for production, change GENESIS_MONTH to 3

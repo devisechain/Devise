@@ -6,7 +6,7 @@
     node and facilitates smart contract operations such as adding leptons to the blockchain.
 
     :copyright: © 2018 Pit.AI
-    :license: BSD, see LICENSE for more details.
+    :license: GPLv3, see LICENSE for more details.
 """
 
 from devise.base import IU_PRECISION, BaseDeviseClient

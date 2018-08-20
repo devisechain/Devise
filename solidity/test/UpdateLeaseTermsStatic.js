@@ -41,9 +41,9 @@
         dateTime = await DateTime.deployed();
         estor = await DeviseEternalStorage.new();
         // Create new upgradeable contract frontend (proxy)
-        proxy = await DeviseRentalBase.new(token.address, dateTime.address, estor.address, {from: pitai});
+        proxy = await DeviseRentalBase.new(token.address, dateTime.address, estor.address, 0, {from: pitai});
         // Set it's implementation version
-        await proxy.upgradeTo('1', (await DeviseRental_v1.new()).address);
+        await proxy.upgradeTo((await DeviseRental_v1.new()).address);
         await tokensale.setRentalProxy(proxy.address);
         // Use implementation functions with proxy address
         rental = DeviseRental_v1.at(proxy.address);
@@ -399,7 +399,7 @@
             await timeTravel(86400 * 30 * 6);
             const priceCurrentTerm = (await rental.getRentPerSeatCurrentTerm()).toNumber();
             const proxy = DeviseRentalBase.at(rental.address);
-            await proxy.upgradeTo('2.0', (await DeviseRental_v2.new({from: pitai})).address, {from: pitai});
+            await proxy.upgradeTo((await DeviseRental_v2.new({from: pitai})).address, {from: pitai});
             const rental_v2 = DeviseRental_v2.at(rental.address);
             const priceCurrentTermPostUpgrade = (await rental_v2.getRentPerSeatCurrentTerm()).toNumber();
             assert.equal(priceCurrentTermPostUpgrade, priceCurrentTerm);
@@ -411,7 +411,7 @@
             const bal_v1 = (await rental.getAllowance.call({from: clients[0]})).toNumber();
             // upgrade to v2
             const proxy = DeviseRentalBase.at(rental.address);
-            await proxy.upgradeTo('2.0', (await DeviseRental_v2.new({from: pitai})).address, {from: pitai});
+            await proxy.upgradeTo((await DeviseRental_v2.new({from: pitai})).address, {from: pitai});
             const rental_v2 = DeviseRental_v2.at(proxy.address);
             const bal_v2 = (await rental_v2.getAllowance_v2.call({from: clients[0]})).toNumber();
             assert.equal(bal_v1, bal_v2);
@@ -420,7 +420,7 @@
         it.skip("Can change the implementation of existing functions", async () => {
             // upgrade to v2
             const DeviseRental_v2 = artifacts.require("./test/DeviseRentalImplV2");
-            await proxy.upgradeTo('2.0', (await DeviseRental_v2.new({from: pitai})).address, {from: pitai});
+            await proxy.upgradeTo((await DeviseRental_v2.new({from: pitai})).address, {from: pitai});
             const rental_v2 = DeviseRental_v2.at(proxy.address);
             await rental_v2.provision(10000, {from: clients[0]});
             const bal_v2 = (await rental_v2.getAllowance.call({from: clients[0]})).toNumber();
@@ -429,17 +429,17 @@
 
         it("Cannot override the type of state variables with upgrades", async () => {
             const DeviseRental_v3 = artifacts.require("./test/DeviseRentalImplV3");
-            await proxy.upgradeTo('2.0', (await DeviseRental_v3.new({from: pitai})).address, {from: pitai});
+            await proxy.upgradeTo((await DeviseRental_v3.new({from: pitai})).address, {from: pitai});
             const rental_v3 = DeviseRental_v3.at(proxy.address);
             // can't work without Proxy fallback assembly
             await rental_v3.setVersion(3, {from: pitai});
-            const testString1 = await proxy.version.call({from: clients[0]});
-            assert.equal(testString1, "2.0");
+            const testString1 = (await proxy.version.call({from: clients[0]})).toNumber();
+            assert.equal(testString1, 3);
         });
 
         it.skip("Cannot override state variables with new same type variable in upgrades", async () => {
             const DeviseRental_v3 = artifacts.require("./test/DeviseRentalImplV3");
-            await proxy.upgradeTo('2.0', (await DeviseRental_v3.new({from: pitai})).address, {from: pitai});
+            await proxy.upgradeTo((await DeviseRental_v3.new({from: pitai})).address, {from: pitai});
             const rental_v3 = DeviseRental_v3.at(proxy.address);
             const seats = (await rental.getSeatsAvailable.call({from: clients[0]})).toNumber();
             assert.equal(seats, 100);
@@ -449,9 +449,9 @@
 
         it("Only owner can upgrade contract", async () => {
             const DeviseRental_v3 = artifacts.require("./test/DeviseRentalImplV3");
-            await proxy.upgradeTo('2.0', (await DeviseRental_v3.new({from: pitai})).address, {from: pitai});
+            await proxy.upgradeTo((await DeviseRental_v3.new({from: pitai})).address, {from: pitai});
             try {
-                await proxy.upgradeTo('2.0', (await DeviseRental_v3.new({from: pitai})).address, {from: clients[0]});
+                await proxy.upgradeTo((await DeviseRental_v3.new({from: pitai})).address, {from: clients[0]});
                 expect.fail(null, null, "Only owner should be able to upgrade contract");
             } catch (e) {
             }

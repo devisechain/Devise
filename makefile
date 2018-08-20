@@ -1,6 +1,6 @@
-VERSION = $(shell echo "import devise;print(devise.__version__)" | python)
+VERSION = $(shell echo "import devise;print(devise.__version__)" | PYTHONPATH=./python python)
 
-all: python_test solidity_test
+all: python_test solidity_test javascript_test
 
 python_test: solidity_compile solidity_migrate setup_python
 	@echo Running python tests
@@ -29,8 +29,10 @@ javascript_test: setup_javacript
 solidity_compile: unlock_test_owner
 	@echo Compiling Smart Contracts
 	cd solidity && \
+	rm -rf build && \
 	truffle compile && \
-	cat build/contracts/DeviseRentalImpl.json | jq -r '.abi' > ../python/Devise/abi/DeviseRentalProxy.json && \
+	cat build/contracts/DeviseRentalProxy.json | jq -r '.abi' > ../python/Devise/abi/DeviseRentalProxy.json && \
+	cat build/contracts/DeviseRentalImpl.json | jq -r '.abi' > ../python/Devise/abi/DeviseRentalImpl.json && \
 	cat build/contracts/DeviseToken.json | jq -r '.abi' > ../python/Devise/abi/DeviseToken.json && \
 	cat build/contracts/DeviseTokenSale.json | jq -r '.abi' > ../python/Devise/abi/DeviseTokenSale.json
 

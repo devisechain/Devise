@@ -5,7 +5,7 @@
     This file contains static configuration values for the Devise python codebase
 
     :copyright: © 2018 Pit.AI
-    :license: BSD, see LICENSE for more details.
+    :license: GPLv3, see LICENSE for more details.
 """
 
 # A static mapping of blockchain ID to deployed contract addresses

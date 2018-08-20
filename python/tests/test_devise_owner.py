@@ -63,3 +63,23 @@ class TestDeviseOwner(object):
             'current_term_seats': 0,
             'indicative_next_term_seats': 0
         }
+
+    def test_get_escrow_history(self, owner_client):
+        escrow_hist = owner_client.get_escrow_history()
+        assert escrow_hist == ['0x93c86A7574a1E5eAF773B807fFF3496728f5B1BC']
+
+    def test_get_revenue_history(self, owner_client):
+        rev_hist = owner_client.get_revenue_history()
+        assert rev_hist == ['0x5c7Fe1B9bad324c5c8B90f66243B45F65B3f5fcd']
+
+    def test_implementation(self, owner_client):
+        impl = owner_client.implementation
+        assert impl == '0x5a1e6BC336D5d19E0ADfaa6A1826CF39A55315bA'
+
+    def test_impl_version(self, owner_client):
+        ver = owner_client.impl_version
+        assert ver == 1
+
+    def test_get_all_implementations(self, owner_client):
+        history = owner_client.get_all_implementations()
+        assert history == [{"impl": '0x5a1e6BC336D5d19E0ADfaa6A1826CF39A55315bA', "ver": 1}]

@@ -12,12 +12,12 @@ module.exports = function (deployer, network, accounts) {
 
     deployer.deploy(DateTime, {from: pitai}).then(function () {
         return deployer.deploy(DeviseEternalStorage, {from: pitai}).then(function () {
-            return deployer.deploy(DeviseRentalProxy, DeviseToken.address, DateTime.address, DeviseEternalStorage.address, {from: pitai}).then(function () {
+            return deployer.deploy(DeviseRentalProxy, DeviseToken.address, DateTime.address, DeviseEternalStorage.address, 0, {from: pitai}).then(function () {
                 return deployer.deploy(DeviseRentalImpl, {from: pitai}).then(function () {
                     DeviseEternalStorage.deployed().then(async function (des) {
                         await des.authorize((await DeviseRentalProxy.deployed()).address, {from: pitai});
                         const proxy = await DeviseRentalProxy.deployed();
-                        await proxy.upgradeTo('1.0', DeviseRentalImpl.address);
+                        await proxy.upgradeTo(DeviseRentalImpl.address);
                         const tokensale = await DeviseTokenSale.deployed();
                         await tokensale.setRentalProxy(proxy.address);
                         const rentalProxy = await DeviseRentalImpl.at(proxy.address);

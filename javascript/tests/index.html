@@ -1,0 +1,16 @@
+<html>
+    <head>
+        <title>Testing Devise</title>
+        <script src="https://cdn.jsdelivr.net/gh/ethereum/web3.js@6510fe5ff5526ab7d66578cee3a95f980861f436/dist/web3.min.js"></script>
+        <script src="../dist/production/1.0.0/devise.min.js"></script>
+    </head>
+    <body>
+        <h1>Hello Devise!</h1>
+        <script>
+            var client = new devise.DeviseClient(undefined, undefined, 'dev1');
+            client.init_contracts().then(() => {
+                client.current_lease_term().then(lt => alert(lt));
+            });
+        </script>
+    </body>
+</html>
