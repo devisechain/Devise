@@ -6,7 +6,7 @@
     handles downloading the rented data from the web API.
 
     :copyright: © 2018 Pit.AI
-    :license: BSD, see LICENSE for more details.
+    :license: GPLv3, see LICENSE for more details.
 """
 import csv
 import io
@@ -22,8 +22,6 @@ from eth_account.messages import defunct_hash_message
 
 import devise
 from devise.base import BaseDeviseClient
-
-API_ROOT = os.environ.get('API_ROOT_URL', 'https://api.devisechain.io')
 
 
 class RentalAPI(BaseDeviseClient):
@@ -93,7 +91,7 @@ class RentalAPI(BaseDeviseClient):
 
     def download_latest_weights(self):
         """Downloads the last weights available for for each lepton in the blockchain"""
-        api_url = API_ROOT + self.get_signed_api_url('/v1/devisechain/latest_weights')
+        api_url = self._api_root + self.get_signed_api_url('/v1/devisechain/latest_weights')
         self.logger.info("Downloading %s", api_url)
         unique_filename = uuid.uuid4().hex
         self._download(api_url, unique_filename)
@@ -105,11 +103,11 @@ class RentalAPI(BaseDeviseClient):
     def download_historical_weights(self):
         """Downloads a historical archive with all the weights calculated for each lepton in the blockchain
          excluding recent weights"""
-        api_url = API_ROOT + self.get_signed_api_url('/v1/devisechain/historical_weights')
+        api_url = self._api_root + self.get_signed_api_url('/v1/devisechain/historical_weights')
         self._download(api_url, 'devise_historical_weights.tar')
 
     def download_historical_returns(self):
         """Downloads a historical archive with all the returns calculated for each lepton in the blockchain
          excluding recent returns"""
-        api_url = API_ROOT + self.get_signed_api_url('/v1/devisechain/historical_returns')
+        api_url = self._api_root + self.get_signed_api_url('/v1/devisechain/historical_returns')
         self._download(api_url, 'devise_historical_returns.tar')

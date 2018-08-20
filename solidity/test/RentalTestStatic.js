@@ -69,13 +69,13 @@ async function setupFixtures() {
     await token.approve(tokensale.address, saleAmount, {from: tokenWallet});
     dateutils = await DateTime.new({from: pitai});
     const dstore = await DeviseEternalStorage.new({from: pitai});
-    proxy = await DeviseRentalProxy.new(token.address, dateutils.address, dstore.address, {from: pitai});
+    proxy = await DeviseRentalProxy.new(token.address, dateutils.address, dstore.address, 0, {from: pitai});
 
     await dstore.authorize(proxy.address, {from: pitai});
 
     const rentalImpl = await DeviseRentalImpl.new({from: pitai});
 
-    await proxy.upgradeTo('1.0', rentalImpl.address, {from: pitai});
+    await proxy.upgradeTo(rentalImpl.address, {from: pitai});
     await tokensale.setRentalProxy(proxy.address);
 
     rentalProxy = await DeviseRentalImpl.at(proxy.address);
@@ -429,7 +429,7 @@ contract("DeviseRentalStatic", () => {
         // No adding new functions without Proxy assembly
         it('test new function in version 2', async function () {
             await assertRevert(rentalProxy_v2.getAllowance_v2({from: clients[0]}));
-            await proxy.upgradeTo('version_2', rental_v2.address, {from: pitai});
+            await proxy.upgradeTo(rental_v2.address, {from: pitai});
             const bal = await rentalProxy_v2.getAllowance_v2.call({from: clients[0]});
             assert.equal(bal.toNumber(), client1_bal);
         });
@@ -476,7 +476,6 @@ contract("DeviseRentalStatic2", () => {
     });
 
     it("The escrow wallet and revenue wallet should not be the same", async function () {
-        await rentalProxy.setEscrowWallet(escrowWallet, {from: pitai});
         await assertRevert(rentalProxy.setRevenueWallet(escrowWallet, {from: pitai}));
     });
 
@@ -486,7 +485,7 @@ contract("DeviseRentalStatic2", () => {
     });
 
     it('can set master node', async function () {
-        await proxy.upgradeTo('version_2', rental_v2.address, {from: pitai});
+        await proxy.upgradeTo(rental_v2.address, {from: pitai});
         await rentalProxy_v2.setMasterNode(clients[0], {from: pitai});
     });
 

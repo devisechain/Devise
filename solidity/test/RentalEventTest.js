@@ -42,18 +42,18 @@
 
         const dateutils = await DateTime.new({from: pitai});
         const dstore = await DeviseEternalStorage.new({from: pitai});
-        const proxy = await DeviseRentalProxy.new(token.address, dateutils.address, dstore.address, {from: pitai});
+        const proxy = await DeviseRentalProxy.new(token.address, dateutils.address, dstore.address, 0, {from: pitai});
 
         await dstore.authorize(proxy.address, {from: pitai});
 
         const rentalImpl = await DeviseRentalImpl.new({from: pitai});
 
-        await proxy.upgradeTo('1.0', rentalImpl.address, {from: pitai});
+        await proxy.upgradeTo(rentalImpl.address, {from: pitai});
         await tokensale.setRentalProxy(proxy.address);
 
         rentalProxy = await DeviseRentalImpl.at(proxy.address);
-        await rentalProxy.setEscrowWallet(escrowWallet);
-        await rentalProxy.setRevenueWallet(revenueWallet);
+        // await rentalProxy.setEscrowWallet(escrowWallet);
+        // await rentalProxy.setRevenueWallet(revenueWallet);
         await rentalProxy.addMasterNode(pitai);
     }
 
@@ -216,6 +216,8 @@
         });
 
         it("Should observe the renter added event", async () => {
+            await rentalProxy.setEscrowWallet(escrowWallet);
+            await rentalProxy.setRevenueWallet(revenueWallet);
             const client = clients[0];
             const numLeptons = (await rentalProxy.getNumberOfLeptons()).toNumber();
             for (let i = numLeptons; i < leptons.length; i++) {
@@ -248,6 +250,8 @@
         });
 
         it("Should observe the renter removed event", async () => {
+            await rentalProxy.setEscrowWallet(escrowWallet);
+            await rentalProxy.setRevenueWallet(revenueWallet);
             const client = clients[0];
             const numLeptons = (await rentalProxy.getNumberOfLeptons()).toNumber();
             for (let i = numLeptons; i < leptons.length; i++) {

@@ -30,8 +30,8 @@ contract DeviseRentalImplV3 is DeviseRentalImplV2 {
         masterNode = addr;
     }
 
-    function addLepton(bytes20 _lepton, bytes20 _prevLepton, uint _incrementalUsefulness) public onlyMaster
-    require(_incrementalUsefulness > 0) {
+    function addLepton(bytes20 _lepton, bytes20 _prevLepton, uint _incrementalUsefulness) public onlyMaster {
+        require(_incrementalUsefulness > 0);
         var (y, m,) = getCurrentDate();
         uint IUTerm = calculateLeaseTerm(y, m) + 1;
         if (IUTerm > leaseTerm + 1) {

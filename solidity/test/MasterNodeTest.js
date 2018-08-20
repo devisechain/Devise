@@ -23,9 +23,9 @@ async function setupFixtures() {
     dateTime = await DateTime.deployed();
     estor = await DeviseEternalStorage.new();
     // Create new upgradeable contract frontend (proxy)
-    proxy = await DeviseRentalBase.new(token.address, dateTime.address, estor.address, {from: pitai});
+    proxy = await DeviseRentalBase.new(token.address, dateTime.address, estor.address, 0, {from: pitai});
     // Set it's implementation version
-    await proxy.upgradeTo('2', (await DeviseRental_v1.new()).address);
+    await proxy.upgradeTo((await DeviseRental_v1.new()).address);
     // Use implementation functions with proxy address
     rental = DeviseRental_v1.at(proxy.address);
 
@@ -113,4 +113,12 @@ contract("DeviseRentalImpl", () => {
         await assertRevert(rental.addLepton(leptons[0], '', 1000000, {from: clients[1]}));
     });
 
+    it("Can get all leptons at once", async () => {
+        await rental.addMasterNode(clients[1], {from: pitai});
+        await rental.addLepton(leptons[0], '', 1000000, {from: clients[1]});
+        await rental.addLepton(leptons[1], leptons[0], 900000, {from: clients[1]});
+        const [hashes, incrementalUsefulnesses] = await rental.getAllLeptons.call();
+        assert.deepEqual(hashes, [leptons[0], leptons[1]]);
+        assert.deepEqual(incrementalUsefulnesses, [new web3.BigNumber(1000000), new web3.BigNumber(900000)]);
+    });
 });

@@ -5,7 +5,7 @@
     This is the base class for all smart contract operations including signing transaction with account or private key.
 
     :copyright: © 2018 Pit.AI
-    :license: BSD, see LICENSE for more details.
+    :license: GPLv3, see LICENSE for more details.
 """
 import json
 import logging
@@ -14,6 +14,7 @@ import sys
 from getpass import getpass
 from pathlib import Path
 
+import requests
 import rlp
 import web3
 from eth_account import Account
@@ -25,19 +26,19 @@ from web3.gas_strategies.time_based import fast_gas_price_strategy
 from web3.middleware import geth_poa_middleware
 from web3.providers import HTTPProvider
 
-from .config import CONTRACT_ADDRESSES
 from .ledger import LedgerWallet
 
 IU_PRECISION = 1e6
-NETWORK_TO_NODE = {
-    "MAINNET": "https://mainnet.infura.io/ZQl920lU4Wyl6vyrND55",
-    "RINKEBY": "https://rinkeby.infura.io/ZQl920lU4Wyl6vyrND55",
-    "DEV1": "https://dev1.devisechain.io",
-    "DEV2": "https://dev2.devisechain.io",
-    "GANACHE": "http://localhost:8545"
-}
+CDN_ROOT = 'https://config.devisefoundation.org/config.json'
+resp = requests.get(CDN_ROOT)
+resp_json = resp.json()
+CONTRACT_ADDRESSES = resp_json["CONTRACT_ADDRESSES"]
+NETWORK_TO_NODE = resp_json["NETWORK_TO_NODE"]
 
 NODE_TO_NETWORK = {NETWORK_TO_NODE[network]: network for network in NETWORK_TO_NODE.keys()}
+
+network = os.environ.get("ETHEREUM_NETWORK", "mainnet")
+API_ROOT = resp_json["API_ROOT_URL"].get(network.upper(), 'https://api.devisechain.io')
 
 
 def get_contract_abi(contract_name):
@@ -159,6 +160,7 @@ class BaseEthereumClient(object):
 
         # Automatically determine necessary gas based on 5min to mine avg time
         self.w3.eth.setGasPriceStrategy(fast_gas_price_strategy)
+        self._api_root = API_ROOT
 
     def _init_credentials(self, key_file, private_key, account, password, auth_type):
         """
@@ -395,8 +397,11 @@ class BaseDeviseClient(BaseEthereumClient):
         self._token_sale_contract = self.w3.eth.contract(address=contract_addresses.get('DEVISE_TOKEN_SALE'),
                                                          abi=get_contract_abi('DeviseTokenSale'))
         # The Devise Rental Contract
+        rental_abi = get_contract_abi('DeviseRentalImpl')
         self._rental_contract = self.w3.eth.contract(address=contract_addresses.get('DEVISE_RENTAL'),
-                                                     abi=get_contract_abi('DeviseRentalProxy'))
+                                                     abi=rental_abi)
+        self._rental_proxy_contract = self.w3.eth.contract(address=contract_addresses.get('DEVISE_RENTAL'),
+                                                           abi=get_contract_abi('DeviseRentalProxy'))
 
         if self._token_contract.address is None or self._token_sale_contract.address is None or self._rental_contract.address is None:
             raise RuntimeError(

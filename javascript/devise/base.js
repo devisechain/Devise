@@ -1,3 +1,9 @@
+/*!
+ * Base classes BaseEthereumClient, BaseDeviseClient and related functions
+ * Copyright(c) 2018 Pit.AI Technologies
+ * LICENSE: GPLv3
+ */
+
 // Node.js doesn't have XHR, shim it
 if (typeof XMLHttpRequest === 'undefined') {
     global.XMLHttpRequest = require('xmlhttprequest').XMLHttpRequest;
@@ -5,6 +11,7 @@ if (typeof XMLHttpRequest === 'undefined') {
 
 let Web3 = require('web3');
 const assert = require('assert');
+const ETHER_PRECISION = 10 ** 18;
 
 // The following code is to accommodate using jQuery in Node.js
 const GITHUB_USERNAME = 'devisechain';
@@ -44,8 +51,16 @@ const get_default_node_url = function (network = 'MAINNET') {
 };
 
 class BaseEthereumClient {
+    /**
+     * Constructor
+     * @param account default: none, optional address to query the smart contract as
+     * @param node_url default: auto, optional ethereum node from which to query smart contract information
+     * @param network default: MainNet, optional network to connect to
+     */
     constructor(account, node_url, network) {
-        assert(node_url || network, "Either node_url or network has to be set.");
+        if (!network) {
+            network = 'MAINNET'
+        }
         node_url = node_url || get_default_node_url(network);
         account = account || '0x0000000000000000000000000000000000000000';
         const provider = new Web3.providers.HttpProvider(node_url);
@@ -61,6 +76,13 @@ class BaseEthereumClient {
         return id;
     }
 
+    async get_eth_balance(address) {
+        if (address === undefined)
+            return 0;
+        const bal = await this.web3.eth.getBalance(address) / ETHER_PRECISION;
+        return bal;
+    }
+
 }
 
 class BaseDeviseClient extends BaseEthereumClient {
@@ -72,6 +94,80 @@ class BaseDeviseClient extends BaseEthereumClient {
         const token_abi = get_contract_abi('devise_token');
         const token_sale_abi = get_contract_abi('devise_token_sale');
         const rental_abi = get_contract_abi('devise_rental_proxy');
+        rental_abi.push({
+            "constant": true,
+            "inputs": [],
+            "name": "implementation",
+            "outputs": [
+                {
+                    "name": "",
+                    "type": "address"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "view",
+            "type": "function"
+        });
+        rental_abi.push({
+            "constant": true,
+            "inputs": [],
+            "name": "version",
+            "outputs": [
+                {
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "view",
+            "type": "function"
+        });
+        rental_abi.push({
+            "constant": true,
+            "inputs": [],
+            "name": "getAllImplementations",
+            "outputs": [
+                {
+                    "name": "",
+                    "type": "address[]"
+                },
+                {
+                    "name": "",
+                    "type": "uint256[]"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "view",
+            "type": "function"
+        });
+        rental_abi.push({
+            "constant": true,
+            "inputs": [],
+            "name": "getEscrowHistory",
+            "outputs": [
+                {
+                    "name": "",
+                    "type": "address[]"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "view",
+            "type": "function"
+        });
+        rental_abi.push({
+            "constant": true,
+            "inputs": [],
+            "name": "getRevenueHistory",
+            "outputs": [
+                {
+                    "name": "",
+                    "type": "address[]"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "view",
+            "type": "function"
+        });
         const contract_address = get_contract_address();
         const network_id = await this._get_network_id();
         this._token_contract = new this.web3.eth.Contract(token_abi, contract_address[network_id].DEVISE_TOKEN);
@@ -80,4 +176,4 @@ class BaseDeviseClient extends BaseEthereumClient {
     }
 }
 
-module.exports = {BaseEthereumClient, BaseDeviseClient};
+module.exports = {BaseEthereumClient, BaseDeviseClient, get_json_sync};

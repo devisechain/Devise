@@ -1,24 +1,6 @@
 [
   {
     "constant": true,
-    "inputs": [
-      {
-        "name": "addr",
-        "type": "address"
-      },
-      {
-        "name": "roleName",
-        "type": "string"
-      }
-    ],
-    "name": "checkRole",
-    "outputs": [],
-    "payable": false,
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "constant": true,
     "inputs": [],
     "name": "totalSeats",
     "outputs": [
@@ -33,50 +15,8 @@
   },
   {
     "constant": true,
-    "inputs": [
-      {
-        "name": "addr",
-        "type": "address"
-      },
-      {
-        "name": "roleName",
-        "type": "string"
-      }
-    ],
-    "name": "hasRole",
-    "outputs": [
-      {
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "payable": false,
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "constant": true,
     "inputs": [],
     "name": "minimumPricePerBit",
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "payable": false,
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [
-      {
-        "name": "",
-        "type": "bytes20"
-      }
-    ],
-    "name": "leptons",
     "outputs": [
       {
         "name": "",
@@ -109,20 +49,6 @@
       {
         "name": "",
         "type": "bool"
-      }
-    ],
-    "payable": false,
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [],
-    "name": "ROLE_MASTER_NODE",
-    "outputs": [
-      {
-        "name": "",
-        "type": "string"
       }
     ],
     "payable": false,
@@ -173,25 +99,6 @@
   },
   {
     "constant": true,
-    "inputs": [
-      {
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "name": "masterNodes",
-    "outputs": [
-      {
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "payable": false,
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "constant": true,
     "inputs": [],
     "name": "leaseTerm",
     "outputs": [
@@ -219,299 +126,75 @@
     "type": "function"
   },
   {
-    "anonymous": false,
     "inputs": [
       {
-        "indexed": false,
-        "name": "status",
-        "type": "bool"
-      }
-    ],
-    "name": "Leased",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "name": "amount",
-        "type": "uint256"
-      }
-    ],
-    "name": "CurrentAllowance",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "name": "direction",
-        "type": "string"
-      },
-      {
-        "indexed": false,
-        "name": "amount",
-        "type": "uint256"
-      }
-    ],
-    "name": "BalanceChanged",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "name": "status",
-        "type": "bool"
-      }
-    ],
-    "name": "PowerUserStatus",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "name": "msg",
-        "type": "string"
-      },
-      {
-        "indexed": false,
-        "name": "addr",
-        "type": "address"
-      }
-    ],
-    "name": "WalletChanged",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "name": "addr",
-        "type": "address"
-      }
-    ],
-    "name": "DataContractChanged",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "name": "addr",
+        "name": "_token",
         "type": "address"
       },
       {
-        "indexed": false,
-        "name": "ben",
-        "type": "address"
-      }
-    ],
-    "name": "BeneficiaryChanged",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "name": "s",
-        "type": "bytes20"
-      },
-      {
-        "indexed": false,
-        "name": "iu",
-        "type": "uint256"
-      }
-    ],
-    "name": "LeptonAdded",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "name": "lt",
-        "type": "uint256"
-      }
-    ],
-    "name": "LeaseTermUpdated",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "name": "src",
-        "type": "string"
-      },
-      {
-        "indexed": false,
-        "name": "amt",
-        "type": "uint256"
-      }
-    ],
-    "name": "FeeChanged",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "name": "prec",
-        "type": "uint32"
-      }
-    ],
-    "name": "IncrementalUsefulnessPrecisionChanged",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "name": "s",
-        "type": "uint8"
-      }
-    ],
-    "name": "TotalSeatsChanged",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "name": "ts",
-        "type": "uint256"
-      }
-    ],
-    "name": "MaxSeatsPerAddressChanged",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "name": "prc",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "name": "all",
-        "type": "uint256"
-      }
-    ],
-    "name": "LeasePriceCalculated",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "name": "leaseTerm",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "name": "prc",
-        "type": "uint256"
-      }
-    ],
-    "name": "AuctionPriceSet",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "name": "client",
-        "type": "address"
-      }
-    ],
-    "name": "RenterAdded",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "name": "client",
-        "type": "address"
-      }
-    ],
-    "name": "RenterRemoved",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "name": "client",
-        "type": "address"
-      }
-    ],
-    "name": "BidCanceled",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "name": "addr",
+        "name": "_dateUtils",
         "type": "address"
       },
       {
-        "indexed": false,
-        "name": "roleName",
-        "type": "string"
+        "name": "_permData",
+        "type": "address"
+      },
+      {
+        "name": "_totalIncrementalUsefulness",
+        "type": "uint256"
       }
     ],
-    "name": "RoleAdded",
-    "type": "event"
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  {
+    "payable": true,
+    "stateMutability": "payable",
+    "type": "fallback"
   },
   {
     "anonymous": false,
     "inputs": [
       {
         "indexed": false,
-        "name": "addr",
-        "type": "address"
+        "name": "version",
+        "type": "uint256"
       },
       {
-        "indexed": false,
-        "name": "roleName",
-        "type": "string"
+        "indexed": true,
+        "name": "implementation",
+        "type": "address"
       }
     ],
-    "name": "RoleRemoved",
+    "name": "Upgraded",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [],
+    "name": "ContractPaused",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [],
+    "name": "ContractUnpaused",
     "type": "event"
   },
   {
     "constant": false,
-    "inputs": [
-      {
-        "name": "addr",
-        "type": "address"
-      }
-    ],
-    "name": "setEscrowWallet",
+    "inputs": [],
+    "name": "pause",
+    "outputs": [],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [],
+    "name": "unpause",
     "outputs": [],
     "payable": false,
     "stateMutability": "nonpayable",
@@ -521,11 +204,11 @@
     "constant": false,
     "inputs": [
       {
-        "name": "addr",
+        "name": "implementation",
         "type": "address"
       }
     ],
-    "name": "setRevenueWallet",
+    "name": "upgradeTo",
     "outputs": [],
     "payable": false,
     "stateMutability": "nonpayable",
@@ -534,11 +217,43 @@
   {
     "constant": true,
     "inputs": [],
-    "name": "getDataContract",
+    "name": "getAllImplementations",
+    "outputs": [
+      {
+        "name": "",
+        "type": "address[]"
+      },
+      {
+        "name": "",
+        "type": "uint256[]"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "implementation",
     "outputs": [
       {
         "name": "",
         "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "version",
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256"
       }
     ],
     "payable": false,
@@ -575,6 +290,66 @@
   },
   {
     "constant": false,
+    "inputs": [],
+    "name": "applyForPowerUser",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [],
+    "name": "requestHistoricalData",
+    "outputs": [],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "_beneficiary",
+        "type": "address"
+      }
+    ],
+    "name": "designateBeneficiary",
+    "outputs": [],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "limitPrice",
+        "type": "uint256"
+      },
+      {
+        "name": "_seats",
+        "type": "uint8"
+      }
+    ],
+    "name": "leaseAll",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": false,
     "inputs": [
       {
         "name": "amount",
@@ -591,11 +366,25 @@
     "constant": false,
     "inputs": [
       {
-        "name": "_beneficiary",
-        "type": "address"
+        "name": "amount",
+        "type": "uint256"
       }
     ],
-    "name": "designateBeneficiary",
+    "name": "setHistoricalDataFee",
+    "outputs": [],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "setPowerUserClubFee",
     "outputs": [],
     "payable": false,
     "stateMutability": "nonpayable",
@@ -653,10 +442,6 @@
       },
       {
         "name": "",
-        "type": "uint256"
-      },
-      {
-        "name": "",
         "type": "bool"
       },
       {
@@ -682,20 +467,6 @@
     "name": "getAllowance",
     "outputs": [
       {
-        "name": "amount",
-        "type": "uint256"
-      }
-    ],
-    "payable": false,
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [],
-    "name": "getTotalIncrementalUsefulness",
-    "outputs": [
-      {
         "name": "",
         "type": "uint256"
       }
@@ -707,7 +478,7 @@
   {
     "constant": true,
     "inputs": [],
-    "name": "getPricePerBitCurrentTerm",
+    "name": "getTotalIncrementalUsefulness",
     "outputs": [
       {
         "name": "",
@@ -735,20 +506,6 @@
   {
     "constant": true,
     "inputs": [],
-    "name": "getIndicativePricePerBitNextTerm",
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "payable": false,
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [],
     "name": "getIndicativeRentPerSeatNextTerm",
     "outputs": [
       {
@@ -761,176 +518,17 @@
     "type": "function"
   },
   {
-    "constant": false,
-    "inputs": [
-      {
-        "name": "_lepton",
-        "type": "bytes20"
-      },
-      {
-        "name": "_prevLepton",
-        "type": "bytes20"
-      },
-      {
-        "name": "_incrementalUsefulness",
-        "type": "uint256"
-      }
-    ],
-    "name": "addLepton",
-    "outputs": [],
-    "payable": false,
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "constant": false,
-    "inputs": [
-      {
-        "name": "addr",
-        "type": "address"
-      }
-    ],
-    "name": "addMasterNode",
-    "outputs": [],
-    "payable": false,
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "constant": false,
-    "inputs": [
-      {
-        "name": "addr",
-        "type": "address"
-      }
-    ],
-    "name": "removeMasterNode",
-    "outputs": [],
-    "payable": false,
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [],
-    "name": "getMasterNodes",
-    "outputs": [
-      {
-        "name": "",
-        "type": "address[]"
-      }
-    ],
-    "payable": false,
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "constant": false,
-    "inputs": [],
-    "name": "applyForPowerUser",
-    "outputs": [
-      {
-        "name": "status",
-        "type": "bool"
-      }
-    ],
-    "payable": false,
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
     "constant": true,
     "inputs": [],
     "name": "isPowerUser",
     "outputs": [
       {
-        "name": "status",
-        "type": "bool"
-      }
-    ],
-    "payable": false,
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "constant": false,
-    "inputs": [],
-    "name": "requestHistoricalData",
-    "outputs": [],
-    "payable": false,
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [],
-    "name": "getHighestBidder",
-    "outputs": [
-      {
-        "name": "",
-        "type": "address"
-      },
-      {
-        "name": "",
-        "type": "uint8"
-      },
-      {
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "payable": false,
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [
-      {
-        "name": "_client",
-        "type": "address"
-      }
-    ],
-    "name": "getNextHighestBidder",
-    "outputs": [
-      {
-        "name": "",
-        "type": "address"
-      },
-      {
-        "name": "",
-        "type": "uint8"
-      },
-      {
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "payable": false,
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "constant": false,
-    "inputs": [
-      {
-        "name": "limitPrice",
-        "type": "uint256"
-      },
-      {
-        "name": "_seats",
-        "type": "uint8"
-      }
-    ],
-    "name": "leaseAll",
-    "outputs": [
-      {
         "name": "",
         "type": "bool"
       }
     ],
     "payable": false,
-    "stateMutability": "nonpayable",
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -1002,49 +600,70 @@
   {
     "constant": true,
     "inputs": [],
+    "name": "getSeatsAvailable",
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "getHighestBidder",
+    "outputs": [
+      {
+        "name": "",
+        "type": "address"
+      },
+      {
+        "name": "",
+        "type": "uint8"
+      },
+      {
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "_client",
+        "type": "address"
+      }
+    ],
+    "name": "getNextHighestBidder",
+    "outputs": [
+      {
+        "name": "",
+        "type": "address"
+      },
+      {
+        "name": "",
+        "type": "uint8"
+      },
+      {
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
     "name": "getNumberOfLeptons",
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "payable": false,
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [],
-    "name": "getCurrentTermSeats",
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "payable": false,
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [],
-    "name": "getNextTermSeats",
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "payable": false,
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [],
-    "name": "getCurrentLeaseTerm",
     "outputs": [
       {
         "name": "",
@@ -1081,122 +700,15 @@
   {
     "constant": true,
     "inputs": [],
-    "name": "getSeatsAvailable",
+    "name": "getDataContract",
     "outputs": [
       {
         "name": "",
-        "type": "uint256"
+        "type": "address"
       }
     ],
     "payable": false,
     "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "constant": false,
-    "inputs": [],
-    "name": "updateLeaseTerms",
-    "outputs": [],
-    "payable": false,
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "constant": false,
-    "inputs": [
-      {
-        "name": "amount",
-        "type": "uint256"
-      }
-    ],
-    "name": "setHistoricalDataFee",
-    "outputs": [],
-    "payable": false,
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "constant": false,
-    "inputs": [
-      {
-        "name": "amount",
-        "type": "uint256"
-      }
-    ],
-    "name": "setPowerUserClubFee",
-    "outputs": [],
-    "payable": false,
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [],
-    "name": "getPowerUserMinimum",
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "payable": false,
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "constant": false,
-    "inputs": [
-      {
-        "name": "dec",
-        "type": "uint8"
-      }
-    ],
-    "name": "setUsefulnessBaseline",
-    "outputs": [],
-    "payable": false,
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "constant": false,
-    "inputs": [
-      {
-        "name": "amount",
-        "type": "uint256"
-      }
-    ],
-    "name": "setMinimumPricePerBit",
-    "outputs": [],
-    "payable": false,
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "constant": false,
-    "inputs": [
-      {
-        "name": "amount",
-        "type": "uint8"
-      }
-    ],
-    "name": "setTotalSeats",
-    "outputs": [],
-    "payable": false,
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "constant": false,
-    "inputs": [
-      {
-        "name": "amount",
-        "type": "uint256"
-      }
-    ],
-    "name": "setMaxSeatPercentage",
-    "outputs": [],
-    "payable": false,
-    "stateMutability": "nonpayable",
     "type": "function"
   }
 ]

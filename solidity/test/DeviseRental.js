@@ -302,13 +302,13 @@ contract("DeviseRental", () => {
         await token.approve(tokensale.address, saleAmount, {from: tokenWallet});
         dateutils = await DateTime.new({from: pitai});
         const dstore = await DeviseEternalStorage.new({from: pitai});
-        proxy = await DeviseRentalProxy.new(token.address, dateutils.address, dstore.address, {from: pitai});
+        proxy = await DeviseRentalProxy.new(token.address, dateutils.address, dstore.address, 0, {from: pitai});
 
         await dstore.authorize(proxy.address, {from: pitai});
 
         const rentalImpl = await DeviseRentalImpl.new({from: pitai});
 
-        await proxy.upgradeTo('1.0', rentalImpl.address, {from: pitai});
+        await proxy.upgradeTo(rentalImpl.address, {from: pitai});
         await tokensale.setRentalProxy(proxy.address);
 
         // rentalProxy will have all the interfaces of DeviseRentalImpl contract
@@ -629,7 +629,7 @@ contract("DeviseRental", () => {
         it('test new function in version 2', async function () {
             const prev_bal = (await rentalProxy_v2.getAllowance({from: clients[0]})).toNumber();
             await assertRevert(rentalProxy_v2.getAllowance_v2({from: clients[0]}));
-            await proxy.upgradeTo('version_2', rental_v2.address, {from: pitai});
+            await proxy.upgradeTo(rental_v2.address, {from: pitai});
             const bal = (await rentalProxy_v2.getAllowance_v2.call({from: clients[0]})).toNumber();
             assert.equal(prev_bal, bal);
         });

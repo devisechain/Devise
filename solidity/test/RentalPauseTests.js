@@ -39,9 +39,9 @@ async function setupFixtures() {
     dateTime = await DateTime.deployed();
     estor = await DeviseEternalStorage.new();
     // Create new upgradeable contract frontend (proxy)
-    proxy = await DeviseRentalBase.new(token.address, dateTime.address, estor.address, {from: pitai});
+    proxy = await DeviseRentalBase.new(token.address, dateTime.address, estor.address, 0, {from: pitai});
     // Set it's implementation version
-    await proxy.upgradeTo('1', (await DeviseRental_v1.new()).address);
+    await proxy.upgradeTo((await DeviseRental_v1.new()).address);
     await tokensale.setRentalProxy(proxy.address);
     // Use implementation functions with proxy address
     rental = DeviseRental_v1.at(proxy.address);
@@ -103,7 +103,7 @@ contract("Rental Contract (Pausing tests)", function () {
         await rental.setHistoricalDataFee(0, {from: pitai});
         await rental.setPowerUserClubFee(0, {from: pitai});
         await rental.setDataContract(estor.address, {from: pitai});
-        await proxy.upgradeTo('3', (await DeviseRental_v1.new()).address);
+        await proxy.upgradeTo((await DeviseRental_v1.new()).address);
         // client operations are paused
         await assertRevert(rental.provision(10000 * microDVZ, {from: client}));
         await assertRevert(rental.applyForPowerUser({from: client}));
@@ -123,7 +123,7 @@ contract("Rental Contract (Pausing tests)", function () {
         await rental.setHistoricalDataFee(0, {from: pitai});
         await rental.setPowerUserClubFee(0, {from: pitai});
         await rental.setDataContract(estor.address, {from: pitai});
-        await proxy.upgradeTo('4', (await DeviseRental_v1.new()).address, {from: pitai});
+        await proxy.upgradeTo((await DeviseRental_v1.new()).address, {from: pitai});
         // client operations are ok
         await rental.provision(10000 * microDVZ, {from: client});
         await rental.applyForPowerUser({from: client});

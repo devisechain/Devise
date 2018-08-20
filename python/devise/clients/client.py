@@ -7,7 +7,7 @@
     download of the rented data.
 
     :copyright: © 2018 Pit.AI
-    :license: BSD, see LICENSE for more details.
+    :license: GPLv3, see LICENSE for more details.
 """
 from .api import RentalAPI
 from .contract import RentalContract
