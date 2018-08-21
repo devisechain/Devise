@@ -47,6 +47,7 @@ contract DeviseRentalProxy is Proxy, DeviseRentalStorage {
         priceNextTerm.pricePerBitOfIU = minimumPricePerBit;
         seatsAvailable = totalSeats;
         totalIncrementalUsefulness = _totalIncrementalUsefulness;
+        priceNextTerm.totalIncrementalUsefulness = _totalIncrementalUsefulness;
     }
 
     /**

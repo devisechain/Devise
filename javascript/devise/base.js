@@ -15,9 +15,9 @@ const ETHER_PRECISION = 10 ** 18;
 
 // The following code is to accommodate using jQuery in Node.js
 const GITHUB_USERNAME = 'devisechain';
-const REPO_VERSION = 'd0fcf82f472fde7beb4b83d5e5bf4e9756827dca';
+const REPO_VERSION = 'bd9251f564a672e8f4f01ddd7239297b2ef88dda';
 const CDN_ROOT = 'https://cdn.jsdelivr.net/gh/' + GITHUB_USERNAME + '/Devise@' + REPO_VERSION + '/config/';
-
+const CONFIG_URL = 'https://config.devisefoundation.org/config.json';
 
 const get_json_sync = function (url) {
     let res;
@@ -37,17 +37,13 @@ const get_contract_abi = function (contractName) {
 };
 
 const get_contract_address = function () {
-    const url = CDN_ROOT + 'contract_address.json';
-    const data = get_json_sync(url);
-    return data;
+    const config = get_json_sync(CONFIG_URL);
+    return config["CONTRACT_ADDRESSES"];
 };
 
 const get_default_node_url = function (network = 'MAINNET') {
-    const url = CDN_ROOT + 'network_to_node.json';
-    let network_to_node;
-    network_to_node = get_json_sync(url);
-    network = network.toUpperCase();
-    return network_to_node[network];
+    const config = get_json_sync(CONFIG_URL);
+    return config["NETWORK_TO_NODE"][network.toUpperCase()];
 };
 
 class BaseEthereumClient {

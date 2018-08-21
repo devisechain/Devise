@@ -142,11 +142,11 @@ class RentalContract(BaseDeviseClient):
         Returns the list of leptons currently on the Devise blockchain
         :return: a list of leptons in the order they were found and incremental usefulnesses added.
         """
-        count = self._rental_contract.functions.getNumberOfLeptons().call()
+        all_leptons = self._rental_contract.functions.getAllLeptons().call()
         leptons = []
         prev_hash = None
-        for i in range(count):
-            lepton_hash, contract_iu = self._rental_contract.functions.getLepton(i).call()
+        for idx, lepton_hash in enumerate(all_leptons[0]):
+            contract_iu = all_leptons[1][idx]
             lepton_hash = lepton_hash.hex()
             leptons.append({
                 "hash": lepton_hash,
@@ -162,10 +162,9 @@ class RentalContract(BaseDeviseClient):
         Get account summaries of all the addresses that have ever provisioned tokens.
         :return: a list dicts containing the account summary of each address
         """
-        count = self._rental_contract.functions.getNumberOfClients().call()
+        all_clients = self._rental_contract.functions.getAllClients().call()
         clients = []
-        for i in range(count):
-            client = self._rental_contract.functions.getClient(i).call()
+        for client in all_clients:
             clients.append(self.get_client_summary(client))
 
         return clients
@@ -175,10 +174,9 @@ class RentalContract(BaseDeviseClient):
         Get renter account summaries of all current lease term renters from the smart contract
         :return: a list of dicts containing the renters' account summaries
         """
-        count = self._rental_contract.functions.getNumberOfRenters().call()
+        all_renters = self._rental_contract.functions.getAllRenters().call()
         clients = []
-        for i in range(count):
-            client = self._rental_contract.functions.getRenter(i).call()
+        for client in all_renters:
             clients.append(self.get_client_summary(client))
 
         return clients
@@ -209,28 +207,16 @@ class RentalContract(BaseDeviseClient):
         """
         bids = []
         keys = ['address', 'requested_seats', 'limit_price']
-        bidder = dict(zip(keys, self._rental_contract.functions.getHighestBidder().call()))
-        bidder["limit_price"] = bidder["limit_price"] / TOKEN_PRECISION
-        # solidity null address is 0x0
-        if bidder["address"] == "0x0000000000000000000000000000000000000000":
-            return []
-
-        # If active==True, only active bidders with enough funds to cover their bid
-        if not active or self._has_sufficient_funds(bidder["address"], bidder["requested_seats"],
-                                                    bidder["limit_price"]):
-            bids = [bidder]
-        while True:
-            try:
-                bidder = dict(zip(keys, self._rental_contract.functions.getNextHighestBidder(bidder["address"]).call()))
-                bidder["limit_price"] = bidder["limit_price"] / TOKEN_PRECISION
-                if bidder["address"] == "0x0000000000000000000000000000000000000000":
-                    continue
-                # If active==True, only active bidders with enough funds to cover their bid
-                if not active or \
-                        self._has_sufficient_funds(bidder["address"], bidder["requested_seats"], bidder["limit_price"]):
-                    bids.append(bidder)
-            except:
-                break
+        all_bidders = self._rental_contract.functions.getAllBidders().call()
+        for idx, client in enumerate(all_bidders[0]):
+            bidder = {"address": client, "requested_seats": all_bidders[1][idx], "limit_price": all_bidders[2][idx]}
+            bidder["limit_price"] = bidder["limit_price"] / TOKEN_PRECISION
+            if bidder["address"] == "0x0000000000000000000000000000000000000000":
+                continue
+            # If active==True, only active bidders with enough funds to cover their bid
+            if not active or \
+                    self._has_sufficient_funds(bidder["address"], bidder["requested_seats"], bidder["limit_price"]):
+                bids.append(bidder)
 
         return bids
 

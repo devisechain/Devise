@@ -89,6 +89,31 @@ contract DeviseRentalImpl is DeviseRentalStorage, RBAC {
         return revenueHistory;
     }
 
+    /// @dev Return two index-aligned arrays with implementation addresses and version numbers
+    /// @return an array of implementation addresses and array of version numbers
+    function getAllImplementations() public view returns (address[], uint[]) {
+        uint len = implHistory.length;
+        address[] memory impl = new address[](len);
+        uint[] memory ver = new uint[](len);
+        for (uint i = 0; i < len; i++) {
+            impl[i] = implHistory[i];
+            ver[i] = implVersions[impl[i]];
+        }
+        return (impl, ver);
+    }
+
+    /// @dev Gets the address of the current implementation
+    /// @return address of the current implementation
+    function implementation() public view returns (address) {
+        return _implementation;
+    }
+
+    /// @dev Gets the version of the current implementation
+    /// @return address of the current implementation
+    function version() public view returns (uint) {
+        return implVersions[_implementation];
+    }
+
     /// @notice get data contract address
     function getDataContract() public view returns (address) {
         return permData;
@@ -583,7 +608,7 @@ contract DeviseRentalImpl is DeviseRentalStorage, RBAC {
     function _updatePriceNextTerm() internal returns (uint) {
         calculateLeasePriceForNextTerm(0);
         uint price = priceNextTerm.pricePerBitOfIU;
-        uint totalPrice = price.mul(priceNextTerm.totalIncrementalUsefulness).div(usefulnessBaseline);
+        uint totalPrice = price.mul(priceNextTerm.totalIncrementalUsefulness > 0 ? priceNextTerm.totalIncrementalUsefulness : totalIncrementalUsefulness).div(usefulnessBaseline);
         return totalPrice;
     }
 
@@ -634,7 +659,7 @@ contract DeviseRentalImpl is DeviseRentalStorage, RBAC {
         uint price = setAuctionPrice();
         AuctionPriceSet(lt, price);
         priceNextTerm.pricePerBitOfIU = price > minimumPricePerBit ? price : minimumPricePerBit;
-        priceNextTerm.priceForAllLeptons = priceNextTerm.pricePerBitOfIU.mul(priceNextTerm.totalIncrementalUsefulness)
+        priceNextTerm.priceForAllLeptons = priceNextTerm.pricePerBitOfIU.mul(priceNextTerm.totalIncrementalUsefulness > 0 ? priceNextTerm.totalIncrementalUsefulness : totalIncrementalUsefulness)
         .div(usefulnessBaseline);
         LeasePriceCalculated(priceNextTerm.pricePerBitOfIU, priceNextTerm.priceForAllLeptons);
     }
@@ -863,7 +888,7 @@ contract DeviseRentalImpl is DeviseRentalStorage, RBAC {
     function updatePriceForCurrentTerm() internal {
         priceCurrentTerm.pricePerBitOfIU = priceNextTerm.pricePerBitOfIU;
         priceCurrentTerm.priceForAllLeptons = priceNextTerm.priceForAllLeptons;
-        priceCurrentTerm.totalIncrementalUsefulness = priceNextTerm.totalIncrementalUsefulness;
+        priceCurrentTerm.totalIncrementalUsefulness = priceNextTerm.totalIncrementalUsefulness > 0 ? priceNextTerm.totalIncrementalUsefulness : totalIncrementalUsefulness;
         updateRentersList();
     }
 
