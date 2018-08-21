@@ -217,13 +217,13 @@ class RentalContract extends BaseDeviseClient {
      * @returns {Promise<Array>}
      */
     async get_all_leptons() {
+        const all_leptons = await this._rental_contract.methods.getAllLeptons().call();
         const count = await this._rental_contract.methods.getNumberOfLeptons().call();
         let leptons = [];
         let prev_hash;
-        for (let i = 0; i < count; i++) {
-            const lepton = await this._rental_contract.methods.getLepton(i).call();
-            const lepton_hash = lepton[0];
-            const contract_iu = lepton[1];
+        for (let i = 0; i < all_leptons[0].length; i++) {
+            const lepton_hash = all_leptons[0][i];
+            const contract_iu = all_leptons[1][i];
             leptons.push({
                 hash: lepton_hash,
                 previous_hash: prev_hash,
@@ -239,11 +239,10 @@ class RentalContract extends BaseDeviseClient {
      * @returns {Promise<Array>}
      */
     async get_all_clients() {
-        const count = await this._rental_contract.methods.getNumberOfClients().call();
+        const clientAddresses = await this._rental_contract.methods.getAllClients().call();
         let clients = [];
-        for (let i = 0; i < count; i++) {
-            const client = await this._rental_contract.methods.getClient(i).call();
-            const summary = await this.get_client_summary(client);
+        for (let i = 0; i < clientAddresses.length; i++) {
+            const summary = await this.get_client_summary(clientAddresses[i]);
             clients.push(summary);
         }
         return clients;
@@ -254,11 +253,10 @@ class RentalContract extends BaseDeviseClient {
      * @returns {Promise<Array>}
      */
     async get_all_renters() {
-        const count = await this._rental_contract.methods.getNumberOfRenters().call();
+        const renterAddresses = await this._rental_contract.methods.getAllRenters().call();
         let renters = [];
-        for (let i = 0; i < count; i++) {
-            const renter = await this._rental_contract.methods.getRenter(i).call();
-            const summary = await this.get_client_summary(renter);
+        for (let i = 0; i < renterAddresses.length; i++) {
+            const summary = await this.get_client_summary(renterAddresses[i]);
             renters.push(summary);
         }
         return renters;
@@ -291,23 +289,19 @@ class RentalContract extends BaseDeviseClient {
      */
     async get_all_bidders(active = false) {
         let bids = [];
-        let row = await this._rental_contract.methods.getHighestBidder().call();
+        const all_bidders = await this._rental_contract.methods.getAllBidders().call();
 
-        while (row) {
-            try {
-                const {'0': address, '1': requested_seats, '2': _limit_price} = row;
-                const limit_price = _limit_price / TOKEN_PRECISION;
-                if (address === "0x0000000000000000000000000000000000000000") {
-                    row = await this._rental_contract.methods.getNextHighestBidder(address).call();
-                    continue;
-                }
-                if (!active || this._has_sufficient_funds(address, requested_seats, _limit_price))
-                    bids.push({address, requested_seats, limit_price});
-                row = await this._rental_contract.methods.getNextHighestBidder(address).call();
+        for (let i = 0; i < all_bidders[0].length; i++) {
+            if (all_bidders[0][i] === "0x0000000000000000000000000000000000000000") {
+                continue;
             }
-            catch (err) {
-                break;
-            }
+            if (!active || this._has_sufficient_funds(all_bidders[0][i], all_bidders[1][i], all_bidders[2][i] / TOKEN_PRECISION))
+                bids.push({
+                    address: all_bidders[0][i],
+                    requested_seats: all_bidders[1][i],
+                    limit_price: all_bidders[2][i] / TOKEN_PRECISION
+                });
+
         }
         return bids;
     }

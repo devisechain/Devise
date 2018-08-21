@@ -31,6 +31,9 @@ solidity_compile: unlock_test_owner
 	cd solidity && \
 	rm -rf build && \
 	truffle compile && \
+	cat build/contracts/DeviseRentalImpl.json | jq -r '.abi' > ../config/abi/devise_rental_proxy.json && \
+	cat build/contracts/DeviseToken.json | jq -r '.abi' > ../config/abi/devise_token.json && \
+	cat build/contracts/DeviseTokenSale.json | jq -r '.abi' > ../config/abi/devise_token_sale.json && \
 	cat build/contracts/DeviseRentalProxy.json | jq -r '.abi' > ../python/Devise/abi/DeviseRentalProxy.json && \
 	cat build/contracts/DeviseRentalImpl.json | jq -r '.abi' > ../python/Devise/abi/DeviseRentalImpl.json && \
 	cat build/contracts/DeviseToken.json | jq -r '.abi' > ../python/Devise/abi/DeviseToken.json && \

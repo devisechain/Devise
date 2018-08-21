@@ -15,7 +15,7 @@ const ETHER_PRECISION = 10 ** 18;
 
 // The following code is to accommodate using jQuery in Node.js
 const GITHUB_USERNAME = 'devisechain';
-const REPO_VERSION = 'd0fcf82f472fde7beb4b83d5e5bf4e9756827dca';
+const REPO_VERSION = '9aefe86d422bb86ed65fbd09817eabd5eac6d61a';
 const CDN_ROOT = 'https://cdn.jsdelivr.net/gh/' + GITHUB_USERNAME + '/Devise@' + REPO_VERSION + '/config/';
 
 
