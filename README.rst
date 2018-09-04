@@ -8,7 +8,9 @@ Devise synthetic assets are listed on Devise if and only if they provably add va
 
 Each synthetic asset on Devise is a unique data stream accessible through a cryptographic API. An Ethereum smart-contract is used to (anonymously) control access right to the API, users are identified by their Ethereum addresses, and the Ethereum blockchain can be used as a decentralized audit system for scarcity of access.
 
-This repo contains the official Python 3 client supporting all Devise-related operations, as well as a Javascript library and Solidity source code. 
+Access to Devise is granted on a subscription basis with monthly terms renewed automatically until cancelled. Fees are paid in a custom (in-app) utility token, namely the Devise token or DVZ. The monthly fee is automatically set every month by the rental smart contract through a auction mechanism aiming at maximizing the value of the Devise alternative exchange based on clients bids, and under the scarcity constraint on the number of access.
+
+This repo contains the official Python 3 client supporting all Devise-related operations, as well as a Javascript library and all Solidity source code. 
 
 To learn more about Devise, checkout our primer_.
 
