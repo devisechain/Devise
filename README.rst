@@ -1,11 +1,16 @@
-###########################################################################################
-Devise: An Ethereum Marketplace for Engineering Better Representations of Financial Markets
-###########################################################################################
+#################################
+Devise: The Alternative Exchange
+#################################
 
-**Note: We are currently in private beta; only whitelisted users can buy Devise tokens and gain access. If you are an investment manager and would like to participate in our private beta, please send us an email at devise_beta@pit.ai.**
+Assets aren’t listed on traditional exchanges so that hedge funds can generate alpha, but clearly markets aren’t fully efficient, and there is alpha to grab. 
 
-Official Python 3 client to interact with the Devise marketplace. To learn more about Devise, checkout our primer_.
+Devise is an `alternative exchange’ containing hundreds of synthetic assets that have been engineered from the ground-up to help fund managers hunt alpha. Synthetic assets can be accessed anonymously, and scarcity of access is guaranteed and can be audited without a trusted central party and in a fully decentralized fashion.
 
+Devise synthetic assets, which we call leptons, are listed on Devise if they provably add value to all leptons already on Devise, as well as 60 of the most liquid U.S. futures (accounting for more than 90% of trading volume) as per the information-theoretical proof-of-usefulness framework described in our `Yellow Paper <https://github.com/devisechain/Devise/blob/master/yellow_paper.pdf>`_.
+
+Each asset on Devise is a unique stream of updates accessible through a cryptographic API. An Ethereum smart-contract is used to (anonymously) control access right to the API, users are identified by their Ethereum addresses, and the Ethereum blockchain can be used as a decentralized audit system for scarcity of access.
+
+This is the official Python 3 client supporting all Devise-related operations. To learn more about Devise, checkout our primer_.
 
 
 .. contents:: Table of Contents
@@ -87,7 +92,7 @@ If needed, you can override the public node used to connect to the Ethereum netw
 How To Access The Devise Blockchain
 ===================================
 
-In order to access the Devise blockchain, you need to i) have enough DVZ tokens, ii) fund your escrow account with us in DVZ, iii) submit a bid, and iv) request data from the API if your bid is successful.
+In order to access the Devise blockchain, you need to i) have enough DVZ tokens, ii) submit a bid, and iii) request data from the API if your bid is successful.
 
 
 Our initial token sale requires all buyers (investment managers) to undergo KYC. Only whitelisted addresses can buy Devise tokens. To be whitelisted, send us an email at devise_beta@pit.ai. Once you've been whitelisted, here are a few ways of buying DVZ tokens:
