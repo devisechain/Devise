@@ -2,15 +2,15 @@
 Devise: The Alternative Exchange
 #################################
 
-Assets aren’t listed on traditional exchanges so that hedge funds can generate alpha, but clearly markets aren’t fully efficient, and there is alpha to grab. 
+Assets aren’t listed on traditional exchanges so that hedge funds can generate alpha, but clearly markets aren’t fully efficient, and there is alpha to grab. Devise is an *alternative exchange* containing hundreds of synthetic assets that have been engineered from the ground-up to help fund managers hunt alpha. Synthetic assets can be accessed anonymously, and scarcity of access is guaranteed and can be audited without a trusted central party, and in a fully decentralized fashion.
 
-Devise is an `alternative exchange’ containing hundreds of synthetic assets that have been engineered from the ground-up to help fund managers hunt alpha. Synthetic assets can be accessed anonymously, and scarcity of access is guaranteed and can be audited without a trusted central party and in a fully decentralized fashion.
+Devise synthetic assets, are listed on Devise if and only if they provably add value to all assets already on the exchange, as well as 60 of the most liquid U.S. futures (accounting for more than 90% of trading volume) as per the information-theoretical proof-of-usefulness framework described in our `Yellow Paper <https://github.com/devisechain/Devise/blob/master/yellow_paper.pdf>`_.
 
-Devise synthetic assets, which we call leptons, are listed on Devise if they provably add value to all leptons already on Devise, as well as 60 of the most liquid U.S. futures (accounting for more than 90% of trading volume) as per the information-theoretical proof-of-usefulness framework described in our `Yellow Paper <https://github.com/devisechain/Devise/blob/master/yellow_paper.pdf>`_.
+Each synthetic asset on Devise is a unique data stream accessible through a cryptographic API. An Ethereum smart-contract is used to (anonymously) control access right to the API, users are identified by their Ethereum addresses, and the Ethereum blockchain can be used as a decentralized audit system for scarcity of access.
 
-Each asset on Devise is a unique stream of updates accessible through a cryptographic API. An Ethereum smart-contract is used to (anonymously) control access right to the API, users are identified by their Ethereum addresses, and the Ethereum blockchain can be used as a decentralized audit system for scarcity of access.
+This repo contains the official Python 3 client supporting all Devise-related operations, as well as a Javascript library and Solidity source code. 
 
-This is the official Python 3 client supporting all Devise-related operations. To learn more about Devise, checkout our primer_.
+To learn more about Devise, checkout our primer_.
 
 
 .. contents:: Table of Contents
