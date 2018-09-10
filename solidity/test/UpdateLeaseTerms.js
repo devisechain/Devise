@@ -80,12 +80,13 @@ async function setupFixtures() {
     testSnapshotId = (await evmSnapshot()).result;
 }
 
-async function getProratedDues(seats) {
+async function getProratedDues(seats, extraMonths) {
     // mimic the price calculation used in solidity
     const price = (await rental.getRentPerSeatCurrentTerm.call()).toNumber() * seats;
     let d = timestampToDate(web3.eth.getBlock(web3.eth.blockNumber).timestamp);
     let daysInMonth = new Date(d.getYear(), d.getMonth() + 1, 0).getDate();
-    return Math.floor((price / daysInMonth) * (daysInMonth - (moment(d).utc().date() - 1)));
+    const prorated = Math.floor((price / daysInMonth) * (daysInMonth - (moment(d).utc().date() - 1)));
+    return extraMonths ? (price * extraMonths * seats) + prorated : prorated;
 }
 
 contract("UpdateLeaseTerms", function () {
@@ -1028,7 +1029,7 @@ contract("UpdateLeaseTerms", function () {
     });
 
     it("getAllBidders returns bids in the right order", async () => {
-        const rent = await getProratedDues(6);
+        const rent = await getProratedDues(6, 1);
         const price = (await rental.getPricePerBitCurrentTerm.call()).toNumber();
 
         // 0 bidders
