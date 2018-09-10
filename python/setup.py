@@ -58,6 +58,7 @@ devise_setup(name='devise',
                  'web3==4.2.1',
                  'rlp==0.6.0',
                  'pysha3==1.0.2',
+                 'eth-abi==1.1.1',
                  'eth-utils==1.0.3'
              ],
              extras_require={
