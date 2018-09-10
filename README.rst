@@ -1,11 +1,18 @@
-###########################################################################################
-Devise: An Ethereum Marketplace for Engineering Better Representations of Financial Markets
-###########################################################################################
+#################################
+Devise: The Alternative Exchange
+#################################
 
-**Note: We are currently in private beta; only whitelisted users can buy Devise tokens and gain access. If you are an investment manager and would like to participate in our private beta, please send us an email at devise_beta@pit.ai.**
+**Assets aren’t listed on traditional exchanges so that hedge funds can generate alpha, but clearly markets aren’t fully efficient, and there is alpha to grab. Devise is an alternative exchange containing hundreds of synthetic assets that have been engineered from the ground-up to help fund managers hunt alpha. Synthetic assets can be accessed anonymously, and scarcity of access is guaranteed and can be audited without a trusted central party and in a fully decentralized fashion.**
 
-Official Python 3 client to interact with the Devise marketplace. To learn more about Devise, checkout our primer_.
+Devise synthetic assets are listed on Devise if and only if they provably add value to all assets already on Devise, as well as 60 of the most liquid U.S. futures (accounting for more than 90% of trading volume) as per the information-theoretical proof-of-usefulness framework described in our `Yellow Paper <https://github.com/devisechain/Devise/blob/master/yellow_paper.pdf>`_.
 
+Each synthetic asset on Devise is a unique data stream accessible through a crypto-powered API. An Ethereum smart-contract is used to (anonymously) control access right to the API, users are identified by their Ethereum addresses, and the Ethereum blockchain can be used as a decentralized audit system for scarcity of access.
+
+Access to Devise is granted on a subscription basis with monthly terms renewed automatically until cancelled. Fees are paid in a custom (in-app) utility token, namely the Devise token or DVZ. The monthly fee is automatically set every month by the rental smart contract through an auction mechanism aiming at maximizing the value of the Devise alternative exchange based on clients bids, and under the scarcity constraint on the number of access. To access Devise, a client should be attributed one of 100 seats. Clients wishing to further restrict access to Devise can choose to subscribe to more than 1 seat, up to the maximum of 100, and pay a higher rent accordingly.
+
+This repo contains the official Python 3 client supporting all Devise-related operations, as well as a Javascript library and all Solidity source code. 
+
+To learn more about Devise, checkout our primer_.
 
 
 .. contents:: Table of Contents
@@ -13,7 +20,7 @@ Official Python 3 client to interact with the Devise marketplace. To learn more 
 
 
 Installation
-==============
+============
 
 The easiest way to install the devise repo is from PyPi:
 
@@ -32,16 +39,18 @@ Alternatively, you may clone this repo and install it:
 
 For more detailed installation instructions, and for information on platform specific system dependencies, please consult our `Installation Guide <https://github.com/devisechain/Devise/wiki/8.-Installation-Guide>`_
 
-How To Create A Client
-======================
-
-The repo connects to the Ethereum network through a public Ethereum node.
 
 
-For signing Ethereum transactions and requests to our cryptographic API, we support the `Official Ethereum Wallet`_, hardware wallets (`Ledger Nano S`_ and Trezor_ to be specific), encrypted keystore files, and clear private keys.
+How To Use Our Python Package
+=============================
+
+All Devise-related operations can be performed through the :code:`DeviseClient` class. 
+
+A :code:`DeviseClient` object connects to the Ethereum network through a public Ethereum node both for on-chain operations (a.k.a. transactions) that require signing, and for free off-chain operations (a.k.a. calls).
+
+For any operation requiring cryptographic signing we support the `Official Ethereum Wallet`_, hardware wallets (`Ledger Nano S`_ and Trezor_ to be specific), encrypted keystore files, and clear private keys.
 
 
-All Devise-related operations can be performed through the :code:`DeviseClient` class.
 
 To use the `Official Ethereum Wallet`_, run
 
@@ -81,16 +90,18 @@ To use a clear private key, run
 
 The :code:`password` argument is always optional. When it is needed for signing but not provided, you will be prompted to type it in every time a transaction needs to be signed.
 
-If needed, you can override the public node used to connect to the Ethereum network by specifying a :code:`node_url` when creating your :code:`DeviseClient` instance.
+If needed, you can override the public node used to connect to the Ethereum network by specifying your own :code:`node_url` when creating your :code:`DeviseClient` instance.
 
 
-How To Access The Devise Blockchain
-===================================
-
-In order to access the Devise blockchain, you need to i) have enough DVZ tokens, ii) fund your escrow account with us in DVZ, iii) submit a bid, and iv) request data from the API if your bid is successful.
 
 
-Our initial token sale requires all buyers (investment managers) to undergo KYC. Only whitelisted addresses can buy Devise tokens. To be whitelisted, send us an email at devise_beta@pit.ai. Once you've been whitelisted, here are a few ways of buying DVZ tokens:
+How To Access The Devise Alternative Exchange
+=============================================
+
+In order to access the Devise alternative exchange, you need to i) have enough Devise tokens (DVZ) in your account, ii) submit a bid, and iii) request data from the API if your bid is successful.
+
+
+Our token sale is currently restricted to whitelisted users. To be whitelisted, send us an email at devise_beta@pit.ai. Once you've been whitelisted, here are a few ways of buying DVZ tokens:
 
 .. code-block:: python
 
@@ -135,13 +146,13 @@ If needed, you can request historical data to assess value-add:
     has_access = devise_client.client_summary['historical_data_access']
     print(has_access)
 
-    # Download historical weights of all leptons on the devise
-    # blockchain and store them in the file 'devise_historical_weights.tar'
+    # Download historical weights of all leptons on the Devise alternative
+    # exchange and store them in the file 'devise_historical_weights.tar'
     # in the current folder.
     devise_client.download_historical_weights()
 
-    # Download historical returns of all leptons on the devise
-    # blockchain and store them in the file 'devise_historical_returns.tar'
+    # Download historical returns of all leptons on the Devise alternative
+    # exchange and store them in the file 'devise_historical_returns.tar'
     # in the current folder.
     devise_client.download_historical_returns()
 
@@ -149,7 +160,7 @@ Once you know how many seats you want to bid for, and at what price, you can sub
 
 .. code-block:: python
 
-    # Example: submit a bid for 10 seats on the devise blockchain, for a monthly rent capped at 200,000 DVZ.
+    # Example: submit a bid for 10 seats on the Devise alternative exchange, for a monthly rent capped at 200,000 DVZ.
     seats = 10
     # Note: The limit monthly rent per seat below is indicative.
     lmt_monthly_rent_per_seat = 200000
@@ -174,7 +185,7 @@ If you are entitled seats, you can request portfolio weights updates by running
 
 .. code-block:: python
 
-    # Download latests weights of all leptons on the devise blockchain
+    # Download latests weights of all leptons on the Devise alternative exchange
     # and stores them in the file 'devise_latest_weights_<yyyy-mm-dd>.tar'
     # in the current folder. Data updates are available on a daily basis before 7AM ET.
     latest_weights = devise_client.download_latest_weights()
