@@ -17,6 +17,10 @@ class DeviseOwner extends BaseDeviseClient {
         return await this._rental_contract.methods.version().call();
     }
 
+    async get_rate_setter() {
+        return await this._rental_contract.methods.rateSetter().call();
+    }
+
     async get_escrow_history() {
         const res = await this._rental_contract.methods.getEscrowHistory().call();
         return res;

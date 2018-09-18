@@ -14,12 +14,6 @@ describe('DeviseClientTest', function () {
         const cap = await client.cap();
         assert.equal(cap, 10 * 10 ** 9);
     });
-    it('Should be able to call opening_time from TokenSale', async () => {
-        const opening = await client.opening_time();
-        assert.equal(opening.getFullYear(), 2018);
-        assert.equal(opening.getUTCMonth(), 5 - 1);
-        assert.equal(opening.getUTCDate(), 1);
-    });
     it('Should be able to call current_lease_term from RentalContract', async () => {
         const term = await client.current_lease_term();
         console.log("Current lease term ", term);
@@ -30,5 +24,17 @@ describe('DeviseClientTest', function () {
         client = new DeviseClient('0x0000000000000000000000000000000000000000', node_url);
         const provider = client.web3.currentProvider.host;
         assert.equal(provider, node_url)
+    });
+    it('get_eth_usd_rate should return zero', async () => {
+        const rate = await client.get_eth_usd_rate();
+        assert.equal(rate, 0);
+    });
+    it('get_usd_dvz_rate shoudl return 10', async () => {
+        const rate = await client.get_usd_dvz_rate();
+        assert.equal(rate, 10);
+    });
+    it('get_eth_dvz_rate should return zero', async () => {
+        const rate = await client.get_eth_dvz_rate();
+        assert.equal(rate, 0);
     });
 });

@@ -1,19 +1,17 @@
 const DeviseToken = artifacts.require("./DeviseToken");
-const DeviseTokenSale = artifacts.require("./DeviseTokenSaleBase");
 const DateTime = artifacts.require("./DateTime");
 const DeviseEternalStorage = artifacts.require("./DeviseEternalStorage");
 const DeviseRentalBase = artifacts.require("./DeviseRentalProxy");
 const DeviseRental_v1 = artifacts.require("./DeviseRentalImpl");
 const assertRevert = require('./helpers/assertRevert');
+const {transferTokens} = require('./test-utils');
 
 let token;
-let tokensale;
 let proxy;
+let rental;
 const pitai = web3.eth.accounts[0];
 const tokenWallet = web3.eth.accounts[1];
 const escrowWallet = web3.eth.accounts[2];
-const initialRate = new web3.BigNumber(16000);
-const finalRate = new web3.BigNumber(8000);
 
 contract("Token Features Tests", () => {
     before(async () => {
@@ -27,28 +25,18 @@ contract("Token Features Tests", () => {
         proxy = await DeviseRentalBase.new(token.address, dateTime.address, estor.address, 0, {from: pitai});
         // Set it's implementation version
         await proxy.upgradeTo((await DeviseRental_v1.new()).address);
+        rental = DeviseRental_v1.at(proxy.address);
 
-        const blockNumber = web3.eth.blockNumber;
-        const openingTime = web3.eth.getBlock(blockNumber).timestamp;
-        const closingTime = openingTime + 360 * 24 * 60 * 60;
-        tokensale = await DeviseTokenSale.new(tokenWallet, initialRate, finalRate, openingTime, closingTime, token.address, {from: pitai});
-        await tokensale.setRentalProxy(proxy.address);
         assert.notEqual(token.address, 0x0, "DeviseToken contract address should not be NULL.");
         assert.notEqual(token.address, 0x0, "DeviseToken contract address should not be NULL.");
-        assert.notEqual(tokensale.address, 0x0, "DeviseTokenSale contract address should not be NULL.");
         // mint 1 billion tokens for token sale
         const saleAmount = 1 * 10 ** 9 * 10 ** 6;
         await token.mint(tokenWallet, saleAmount);
-        await token.approve(tokensale.address, saleAmount, {from: tokenWallet});
     });
 
     describe("Test the burnable feature", () => {
         it("Can burn tokens", async () => {
-            await tokensale.sendTransaction({
-                from: pitai,
-                value: web3.toWei(5, "ether"),
-                gas: 1000000
-            });
+            await transferTokens(token, rental, tokenWallet, pitai, 5);
             const bal = (await token.balanceOf.call(pitai)).toNumber();
             assert.isAbove(bal, 0);
             await token.burn(10000, {from: pitai});
@@ -57,11 +45,7 @@ contract("Token Features Tests", () => {
         });
 
         it("Cannot burn more tokens than you have", async () => {
-            await tokensale.sendTransaction({
-                from: escrowWallet,
-                value: web3.toWei(5, "microether"),
-                gas: 1000000
-            });
+            await transferTokens(token, rental, tokenWallet, escrowWallet, .000005);
             const bal = (await token.balanceOf.call(escrowWallet)).toNumber();
             assert.isAbove(bal, 0);
             await assertRevert(token.burn(100000, {from: escrowWallet}));

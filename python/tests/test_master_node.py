@@ -15,7 +15,6 @@
 import hashlib
 
 import pytest
-from pytest import raises
 
 from devise import MasterNode
 from .utils import evm_snapshot, evm_revert, TEST_KEYS
@@ -49,22 +48,6 @@ class TestMasterNode(object):
         assert len(new_leptons) == len(leptons) + 2
         assert new_leptons[-1] == {"hash": lepton2_hash, "previous_hash": lepton1_hash,
                                    "incremental_usefulness": 0.512345}
-
-    def test_buy_tokens_error(self, master_node, client):
-        leptons = client.get_all_leptons()
-        new_lepton = 'hello world %s' % (len(leptons) + 1)
-        lepton_hash = hashlib.sha1(new_lepton.encode('utf8')).hexdigest()
-        master_node.add_lepton(lepton_hash, None, 0.5123456789123456789)
-        with raises(ValueError):
-            client.buy_tokens(200)
-
-    def test_buy_tokens(self, master_node, client):
-        leptons = client.get_all_leptons()
-        new_lepton = 'hello world %s' % (len(leptons) + 1)
-        lepton_hash = hashlib.sha1(new_lepton.encode('utf8')).hexdigest()
-        master_node.add_lepton(lepton_hash, None, 0.5123456789123456789)
-        ret = client.buy_tokens(2000)
-        assert ret == True
 
     def test_add_master_node(self, owner_client, client):
         master_node = MasterNode(private_key=TEST_KEYS[2])

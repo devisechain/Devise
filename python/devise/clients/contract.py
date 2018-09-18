@@ -8,13 +8,14 @@
     :copyright: © 2018 Pit.AI
     :license: GPLv3, see LICENSE for more details.
 """
+from web3 import Web3
 
 from devise.base import costs_gas, generate_account, BaseDeviseClient
-
 from .token import TOKEN_PRECISION
 
 IU_PRECISION = 1e6
 ETHER_PRECISION = int(1e18)
+USD_PRECISION = int(1e8)
 
 
 class RentalContract(BaseDeviseClient):
@@ -57,6 +58,18 @@ class RentalContract(BaseDeviseClient):
     def dvz_balance_escrow(self):
         """Queries the Devise rental contract for the number of tokens provisioned into the rental contract for this account"""
         return self._rental_contract.functions.getAllowance().call({'from': self.address}) / TOKEN_PRECISION
+
+    @property
+    def eth_usd_rate(self):
+        return self._rental_contract.functions.rateETHUSD().call() / USD_PRECISION
+
+    @property
+    def usd_dvz_rate(self):
+        return self._rental_contract.functions.RATE_USD_DVZ().call()
+
+    @property
+    def eth_dvz_rate(self):
+        return self.eth_usd_rate * self.usd_dvz_rate;
 
     @property
     def rent_per_seat_current_term(self):
@@ -223,6 +236,7 @@ class RentalContract(BaseDeviseClient):
     @costs_gas
     def provision(self, tokens):
         """Sends tokens from the current account to the clients contract"""
+        assert self.dvz_balance >= tokens, "Please make sure you have enough DVZ in you wallet."
         self.logger.info("Approving token transfer to rental contract...")
         micro_tokens = int(tokens * TOKEN_PRECISION)
         # Approve tokens transfer into the clients contract
@@ -234,6 +248,63 @@ class RentalContract(BaseDeviseClient):
         tx_receipt = self._transact(self._rental_contract.functions.provision(micro_tokens), {"from": self.address})
 
         return tx_receipt
+
+    @costs_gas
+    def provision_on_behalf_of(self, recipient, tokens):
+        """Provision a client's escrow account with tokens directly"""
+        assert self.dvz_balance >= tokens
+        self.logger.info("Approving token transfer to rental contract...")
+        micro_tokens = int(tokens * TOKEN_PRECISION)
+        # Approve tokens transfer into the clients contract
+        self._transact(self._token_contract.functions.approve(self._rental_contract.address, micro_tokens),
+                       {"from": self.address})
+
+        self.logger.info("Provisioning escrow account %s with %s DVZ tokens..." % (recipient, tokens))
+        recipient = Web3.toChecksumAddress(recipient)
+        return self._transact(self._rental_contract.functions.provisionOnBehalfOf(recipient, micro_tokens),
+                              {"from": self.address})
+
+    @costs_gas
+    def provision_with_ether(self, ether):
+        """Purchase tokens with ether amount and provision them to the rental contract"""
+        assert self.eth_balance >= ether, "Please make sure you have enough ethers in you wallet."
+        tx_receipt = self._transact(self._rental_contract.functions.provisionWithEther(),
+                                    {"from": self.address, "value": self.w3.toWei(ether, "ether")})
+        return tx_receipt
+
+    @costs_gas
+    def fund_account(self, amount, unit, source):
+        """
+        Fund a client's escrow account by specifying the source of funding: ETH or DVZ
+        the unit of amount: ETH, USD or DVZ and the funding amount
+        :param amount: the funding amount, float type
+        :param unit: unit for funding amount, ETH for ether, USD for US dollar, or DVZ for Devise token
+        :param source: funding source, ETH for ether wallet or DVZ for token wallet
+        """
+        assert unit.upper() in ['ETH', 'USD', 'DVZ'], "unit must be one of ETH, USD or DVZ"
+        assert source.upper() in ['ETH', 'DVZ'], "source must be either ETH or DVZ"
+        if source.upper() == 'ETH':
+            if unit.upper() == 'ETH':
+                return self.provision_with_ether(amount)
+            elif unit.upper() == 'USD':
+                rate = self.eth_usd_rate
+                _amt = amount / rate
+                return self.provision_with_ether(_amt)
+            else:
+                rate = self.eth_dvz_rate
+                _amt = amount / rate
+                return self.provision_with_ether(_amt)
+        else:
+            if unit.upper() == 'DVZ':
+                return self.provision(amount)
+            elif unit.upper() == 'ETH':
+                rate = self.eth_dvz_rate
+                _amt = amount * rate
+                return self.provision(_amt)
+            else:
+                rate = self.usd_dvz_rate
+                _amt = amount * rate
+                return self.provision(_amt)
 
     @costs_gas
     def withdraw(self, tokens):

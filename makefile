@@ -33,11 +33,9 @@ solidity_compile: unlock_test_owner
 	truffle compile && \
 	cat build/contracts/DeviseRentalImpl.json | jq -r '.abi' > ../config/abi/devise_rental_proxy.json && \
 	cat build/contracts/DeviseToken.json | jq -r '.abi' > ../config/abi/devise_token.json && \
-	cat build/contracts/DeviseTokenSale.json | jq -r '.abi' > ../config/abi/devise_token_sale.json && \
 	cat build/contracts/DeviseRentalProxy.json | jq -r '.abi' > ../python/Devise/abi/DeviseRentalProxy.json && \
 	cat build/contracts/DeviseRentalImpl.json | jq -r '.abi' > ../python/Devise/abi/DeviseRentalImpl.json && \
-	cat build/contracts/DeviseToken.json | jq -r '.abi' > ../python/Devise/abi/DeviseToken.json && \
-	cat build/contracts/DeviseTokenSale.json | jq -r '.abi' > ../python/Devise/abi/DeviseTokenSale.json
+	cat build/contracts/DeviseToken.json | jq -r '.abi' > ../python/Devise/abi/DeviseToken.json
 
 
 solidity_migrate: unlock_test_owner unlock_test_accounts
@@ -67,7 +65,15 @@ setup_python:
 
 setup_javacript:
 	# Install javascript deps
-	cd javascript && npm install --python=/usr/bin/python2.7
+	cd javascript && npm install --python=/usr/bin/python2.7 && \
+	NEXT_VERSION=$(VERSION) && \
+	node -e "\
+		var j = require('./package.json');\
+		j.version = \"$$NEXT_VERSION\";\
+		var s = JSON.stringify(j, null, 2);\
+		require('fs').writeFileSync('./package.json', s);" && \
+	npm run build_dev && \
+	npm run build
 
 setup: setup_solidity setup_python
 

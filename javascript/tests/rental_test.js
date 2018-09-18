@@ -98,14 +98,17 @@ describe('RentalContractTest', function () {
     });
     it('get_client_summary should return a dictionary of fields', async () => {
         const client = accounts[6];
-        const token_sale = contract._token_sale_contract._address;
         const dvz = 50000 * 10 ** 6;
-        const status = await web3.eth.sendTransaction({
-            from: client,
-            to: token_sale,
-            value: web3.utils.toWei('5', 'ether'),
-            gas: gas
-        });
+        // TODO query this from the rental contract
+        const tokenWallet = '0xEeDd611EFAEe42CB07909f154d73921D0CEF6F1E';
+        // TODO replace this with provision with ether through the rental contract
+        const status = await contract._token_contract.methods.transfer(client, dvz).send({from: tokenWallet, gas: gas});
+        //     web3.eth.sendTransaction({
+        //     from: client,
+        //     to: token_sale,
+        //     value: web3.utils.toWei('5', 'ether'),
+        //     gas: gas
+        // });
         const rental = contract._rental_contract._address;
         await contract._token_contract.methods.approve(rental, dvz).send({from: client, gas: gas});
         const tx = await contract._rental_contract.methods.provision(dvz).send({from: client, gas: gas});

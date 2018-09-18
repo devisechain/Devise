@@ -9,13 +9,16 @@ contract DeviseRentalImpl is DeviseRentalStorage, RBAC {
     using SafeMath for uint256;
 
     string public constant ROLE_MASTER_NODE = "master-node";
+    string public constant ROLE_RATE_SETTER = "rate-setter";
     address[] public masterNodes;
+    address public rateSetter;
     mapping(bytes20 => uint256) public leptons;
-
-    //    modifier require(bool _condition) {
-    //        if (!_condition) revert();
-    //        _;
-    //    }
+    // Use 8 decimal points for the rate
+    // based on the Coinbase number
+    uint public rateETHUSD;
+    address public tokenSaleWallet;
+    uint public constant RATE_USD_DVZ = 10;
+    uint8 constant USD_DECIMALS = 8;
 
     modifier onlyOwner() {
         if (msg.sender != owner) revert();
@@ -24,6 +27,11 @@ contract DeviseRentalImpl is DeviseRentalStorage, RBAC {
 
     modifier onlyMasterNodes() {
         checkRole(msg.sender, ROLE_MASTER_NODE);
+        _;
+    }
+
+    modifier onlyRateSetters() {
+        checkRole(msg.sender, ROLE_RATE_SETTER);
         _;
     }
 
@@ -56,6 +64,20 @@ contract DeviseRentalImpl is DeviseRentalStorage, RBAC {
     event RenterAdded(address client);
     event RenterRemoved(address client);
     event BidCanceled(address client);
+    event RateUpdated(uint timestamp, uint rate);
+
+
+    /// @notice set ETH/USD rate
+    /// @param rate The rate for ETH/USD that should be used
+    function setRateETHUSD(uint rate) public onlyRateSetters {
+        require(rate > 0);
+        rateETHUSD = rate;
+        RateUpdated(block.timestamp, rate);
+    }
+
+    function setTokenWallet(address _tokenSaleWallet) public onlyOwner {
+        tokenSaleWallet = _tokenSaleWallet;
+    }
 
     /// @notice set escrow wallet
     /// @param addr The address of the escrow wallet
@@ -126,20 +148,49 @@ contract DeviseRentalImpl is DeviseRentalStorage, RBAC {
         DataContractChanged(permData);
     }
 
-    /// @notice transfers `(_amount)` from the token contract to the internal ledger for use to pay for lease
-    /// @param _amount The number of tokens to allow for payment of lease dues
-    function provision(uint _amount) public whenNotPaused {
+    /// @notice transfers `(amount)` from the sender's token wallet to the internal ledger for use to pay for lease
+    /// @param amount The number of tokens to allow for payment of lease dues
+    /// @param recipient The client address to increase the balance in escrow for
+    function provisionOnBehalfOf(address recipient, uint amount) public whenNotPaused {
+        _provision(amount, recipient, msg.sender);
+    }
+
+    /// @notice provisions DVZ to the internal ledger for use to pay for lease corresponding to the ETH paid
+    function provisionWithEther() public whenNotPaused payable {
+        require(rateETHUSD > 0);
+        require(escrowWallet != 0x0);
+        require(tokenSaleWallet != 0x0);
+        require(msg.value > 0);
+        uint256 _weiAmount = msg.value;
+        // Convert ETH to USD, keeping all the decimal points
+        // 18 on the ETH side and 8 on the USD side
+        uint usd = _weiAmount.mul(rateETHUSD);
+        // USD/DVZ rate is 10 and a numeral literal is used here
+        uint dvz = usd.mul(RATE_USD_DVZ);
+        uint8 decimals = 18 + USD_DECIMALS - token.decimals();
+        dvz = dvz.div(10 ** uint256(decimals));
+        _provision(dvz, msg.sender, tokenSaleWallet);
+        tokenSaleWallet.transfer(msg.value);
+    }
+
+    function _provision(uint _amount, address sender, address tokenSource) internal whenNotPaused {
         require(_amount > 0);
         require(escrowWallet != 0x0);
         // bring contract state up to date with the current lease term to calculate current prices and escrow balances
         _updateLeaseTerms();
-        token.transferFrom(msg.sender, escrowWallet, _amount);
-        clients[msg.sender].allowance.balance = clients[msg.sender].allowance.balance.add(_amount);
-        if (!clients[msg.sender].isClient) {
-            clientsArray.push(msg.sender);
-            clients[msg.sender].isClient = true;
+        token.transferFrom(tokenSource, escrowWallet, _amount);
+        clients[sender].allowance.balance = clients[sender].allowance.balance.add(_amount);
+        if (!clients[sender].isClient) {
+            clientsArray.push(sender);
+            clients[sender].isClient = true;
         }
-        updatePowerUserStatus(msg.sender);
+        updatePowerUserStatus(sender);
+    }
+
+    /// @notice transfers `(_amount)` from the token contract to the internal ledger for use to pay for lease
+    /// @param _amount The number of tokens to allow for payment of lease dues
+    function provision(uint _amount) public whenNotPaused {
+        _provision(_amount, msg.sender, msg.sender);
     }
 
     /// @notice Withdraw tokens back from the lease allowance to the Token contract
@@ -283,6 +334,18 @@ contract DeviseRentalImpl is DeviseRentalStorage, RBAC {
     }
 
     /**
+     * @dev adds a rate setter role to an address
+     * @param addr address
+     */
+    function addRateSetter(address addr) public onlyOwner {
+        removeRateSetter(rateSetter);
+        if (!hasRole(addr, ROLE_RATE_SETTER)) {
+            addRole(addr, ROLE_RATE_SETTER);
+            rateSetter = addr;
+        }
+    }
+
+    /**
      * @dev removes the master node role from address
      * @param addr address
      */
@@ -294,11 +357,23 @@ contract DeviseRentalImpl is DeviseRentalStorage, RBAC {
     }
 
     /**
+     * @dev removes the rate setter role from address
+     * @param addr address
+     */
+    function removeRateSetter(address addr) public onlyOwner {
+        if (hasRole(addr, ROLE_RATE_SETTER)) {
+            removeRole(addr, ROLE_RATE_SETTER);
+            rateSetter = 0x0;
+        }
+    }
+
+    /**
      * @dev returns all current master nodes
      */
     function getMasterNodes() public constant returns (address[]) {
         return masterNodes;
     }
+
 
     /// @notice apply for access to power user only data
     function applyForPowerUser() public whenNotPaused returns (bool status) {
@@ -336,23 +411,6 @@ contract DeviseRentalImpl is DeviseRentalStorage, RBAC {
             BalanceChanged("decreased", historicalDataFee);
             _allow.canAccessHistoricalData = true;
         }
-    }
-
-    /// @notice get the client with the current highest bid
-    function getHighestBidder() public view returns (address, uint8, uint) {
-        bytes32 nodeId = permData.getIndexMax();
-        return permData.getNodeValueBid(nodeId);
-    }
-
-    /// @notice get the client with the highest bid after the current client
-    /// @param _client the client after which to get the next highest bidder
-    function getNextHighestBidder(address _client) public view returns (address, uint8, uint) {
-        bytes32 nodeId = keccak256(_client);
-        bytes32 pNode = permData.getPreviousNode(nodeId);
-        if (pNode != 0x0) {
-            return permData.getNodeValueBid(pNode);
-        } else
-            revert();
     }
 
     /// Get all bids from the bid grove
@@ -596,6 +654,7 @@ contract DeviseRentalImpl is DeviseRentalStorage, RBAC {
             }
         }
     }
+
 
     function _getNextTermSeats(address _client) internal returns (uint seats) {
         // bring contract state up to date with the current lease term to calculate current prices and escrow balances
@@ -905,23 +964,6 @@ contract DeviseRentalImpl is DeviseRentalStorage, RBAC {
             _allow.isPowerUser = false;
             _allow.canAccessHistoricalData = false;
         }
-    }
-
-    function bytes20ToString(bytes32 x) private pure returns (string) {
-        bytes memory bytesString = new bytes(20);
-        uint charCount = 0;
-        for (uint j = 0; j < 20; j++) {
-            byte char = byte(bytes32(uint(x) * 2 ** (8 * j)));
-            if (char != 0) {
-                bytesString[charCount] = char;
-                charCount++;
-            }
-        }
-        bytes memory bytesStringTrimmed = new bytes(charCount);
-        for (j = 0; j < charCount; j++) {
-            bytesStringTrimmed[j] = bytesString[j];
-        }
-        return string(bytesStringTrimmed);
     }
 
     function max(uint a, uint b) private pure returns (uint) {

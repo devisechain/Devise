@@ -393,9 +393,6 @@ class BaseDeviseClient(BaseEthereumClient):
         # The Devise Token
         self._token_contract = self.w3.eth.contract(address=contract_addresses.get('DEVISE_TOKEN'),
                                                     abi=get_contract_abi('DeviseToken'))
-        # The Devise Token Sale Contract
-        self._token_sale_contract = self.w3.eth.contract(address=contract_addresses.get('DEVISE_TOKEN_SALE'),
-                                                         abi=get_contract_abi('DeviseTokenSale'))
         # The Devise Rental Contract
         rental_abi = get_contract_abi('DeviseRentalImpl')
         self._rental_contract = self.w3.eth.contract(address=contract_addresses.get('DEVISE_RENTAL'),
@@ -403,7 +400,7 @@ class BaseDeviseClient(BaseEthereumClient):
         self._rental_proxy_contract = self.w3.eth.contract(address=contract_addresses.get('DEVISE_RENTAL'),
                                                            abi=get_contract_abi('DeviseRentalProxy'))
 
-        if self._token_contract.address is None or self._token_sale_contract.address is None or self._rental_contract.address is None:
+        if self._token_contract.address is None or self._rental_contract.address is None:
             raise RuntimeError(
                 "\n\n"
                 "****************************************************************************************************\n"

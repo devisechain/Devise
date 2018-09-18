@@ -2,7 +2,6 @@
 /* global assert, artifacts, it, contract, web3*/
 
 const crypto = require('crypto');
-const DeviseTokenSale = artifacts.require("./DeviseTokenSaleBase");
 const DeviseRentalImpl = artifacts.require("./test/DeviseRentalImplTest");
 const DeviseRentalImplV2 = artifacts.require("./test/DeviseRentalImplV3");
 const DeviseToken = artifacts.require("./DeviseToken");
@@ -11,6 +10,7 @@ const DeviseRentalProxy = artifacts.require("./DeviseRentalProxy");
 const DateTime = artifacts.require("./DateTime");
 const assertRevert = require('./helpers/assertRevert');
 const DeviseEternalStorage = artifacts.require("./DeviseEternalStorage");
+const {transferTokens} = require('./test-utils');
 
 // parameters to be set by tests
 // default: num_clients = 6
@@ -20,7 +20,6 @@ let num_st_blockchain = 4;
 
 let token;
 let dateutils;
-let tokensale;
 let rental_v2;
 let rentalProxy;
 let rentalProxy_v2;
@@ -49,8 +48,6 @@ let bids = [];
 let seats = [];
 let microDVZ = 10 ** 6;
 let millionDVZ = 10 ** 6;
-const initialRate = new web3.BigNumber(16000);
-const finalRate = new web3.BigNumber(8000);
 
 const timeTravel = function (time) {
     return new Promise((resolve, reject) =>
@@ -63,22 +60,10 @@ const timeTravel = function (time) {
 };
 
 function tokensaleTestAsArray(testTitle, i) {
-    it(testTitle + (i + 1), function () {
-        const ether_amount = 1000;
-        return tokensale.sendTransaction({
-            from: clients[i],
-            value: web3.toWei(ether_amount, "ether"),
-            gas: 1000000
-        }).then(async function (tx) {
-            const currentRate = await tokensale.getCurrentRate.call();
-            let gas = tx.receipt.gasUsed;
-            console.log("Gas used: ", gas);
-            let cost = gas * gasPrice * ethPrice / 10 ** 9;
-            console.log("The gas cost to call tokensale is ", cost);
-            return token.balanceOf(clients[i]).then(function (bal) {
-                assert.equal(bal / microDVZ, ether_amount * currentRate, "Client's balance should not be zero.");
-            });
-        });
+    // TODO replace with payable provision function test through rental contract
+    it(testTitle + (i + 1), async function () {
+        // TODO temporarily transferring tokens to clients from token sale wallet
+        await transferTokens(token, rentalProxy, tokenWallet, clients[i], 1000);
     });
 }
 
@@ -292,14 +277,11 @@ contract("DeviseRental", () => {
         const blockNumber = web3.eth.blockNumber;
         const openingTime = web3.eth.getBlock(blockNumber).timestamp;
         const closingTime = openingTime + 360 * 24 * 60 * 60;
-        tokensale = await DeviseTokenSale.new(tokenWallet, initialRate, finalRate, openingTime, closingTime, token.address, {from: pitai});
         assert.notEqual(token.address, 0x0, "DeviseToken contract address should not be NULL.");
         assert.notEqual(token.address, 0x0, "DeviseToken contract address should not be NULL.");
-        assert.notEqual(tokensale.address, 0x0, "DeviseTokenSale contract address should not be NULL.");
         // mint 1 billion tokens for token sale
         const saleAmount = 1 * 10 ** 9 * 10 ** 6;
         await token.mint(tokenWallet, saleAmount);
-        await token.approve(tokensale.address, saleAmount, {from: tokenWallet});
         dateutils = await DateTime.new({from: pitai});
         const dstore = await DeviseEternalStorage.new({from: pitai});
         proxy = await DeviseRentalProxy.new(token.address, dateutils.address, dstore.address, 0, {from: pitai});
@@ -309,7 +291,6 @@ contract("DeviseRental", () => {
         const rentalImpl = await DeviseRentalImpl.new({from: pitai});
 
         await proxy.upgradeTo(rentalImpl.address, {from: pitai});
-        await tokensale.setRentalProxy(proxy.address);
 
         // rentalProxy will have all the interfaces of DeviseRentalImpl contract
         // future function calls are directly from rentalProxy

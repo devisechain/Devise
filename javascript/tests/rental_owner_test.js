@@ -3,6 +3,7 @@ const assert = chai.assert;
 const RentalOwner = require('../devise/owner/owner');
 const network = 'ganache';
 const TOKEN_PRECISION = 10 ** 6;
+const assertRevert = require('./helpers/assertRevert');
 
 describe('RentalOwnerTest', function () {
     this.timeout(20000);
@@ -42,5 +43,9 @@ describe('RentalOwnerTest', function () {
     it('get_revenue_version should return a positive number', async () => {
         const rev_ver = await rental_owner.get_revenue_version();
         assert.equal(rev_ver, 1);
+    });
+    it('get_rate_setter should be zero', async () => {
+        const rate_setter = await rental_owner.get_rate_setter();
+        assert.equal(rate_setter, "0x0000000000000000000000000000000000000000");
     });
 });

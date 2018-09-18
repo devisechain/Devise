@@ -1,6 +1,6 @@
 {
   "name": "devise",
-  "version": "1.0.0",
+  "version": "1.6.0",
   "description": "A javascript library for interacting with Devise smart contracts on Ethereum",
   "main": "index.js",
   "directories": {

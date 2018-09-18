@@ -7,7 +7,12 @@
     :copyright: © 2018 Pit.AI
     :license: GPLv3, see LICENSE for more details.
 """
+import json
+
+import requests
+
 from devise.base import costs_gas, BaseDeviseClient
+from devise.clients.contract import USD_PRECISION
 from devise.clients.token import TOKEN_PRECISION
 
 
@@ -32,6 +37,9 @@ class DeviseOwner(BaseDeviseClient):
     def get_master_nodes(self):
         """returns a list of all authorized master nodes"""
         return self._rental_contract.functions.getMasterNodes().call()
+
+    def get_rate_setter(self):
+        return self._rental_contract.functions.rateSetter().call()
 
     def get_escrow_history(self):
         return self._rental_contract.functions.getEscrowHistory().call()
@@ -74,3 +82,23 @@ class DeviseOwner(BaseDeviseClient):
     def remove_master_node(self, address):
         """Unauthorizes an address to perform the master node role"""
         return self._transact(self._rental_contract.functions.removeMasterNode(address), {"from": self.address})
+
+    @costs_gas
+    def add_rate_setter(self, address):
+        return self._transact(self._rental_contract.functions.addRateSetter(address), {"from": self.address})
+
+    @costs_gas
+    def remove_rate_setter(self, address):
+        return self._transact(self._rental_contract.functions.removeRateSetter(address), {"from": self.address})
+
+    @costs_gas
+    def set_eth_usd_rate(self):
+        price = self._get_eth_usd_price()
+        assert price is not None
+        self.logger.info("Setting the exchange rate at $%s per ether", price)
+        price = int(float(price) * USD_PRECISION)
+        assert price > 0
+        self._transact(self._rental_contract.functions.setRateETHUSD(price), {"from": self.address})
+
+    def _get_eth_usd_price(self):
+        return json.loads(requests.get('https://api.gdax.com/products/ETH-USD/ticker').text).get("price", None)

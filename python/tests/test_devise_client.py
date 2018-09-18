@@ -16,9 +16,7 @@ import hashlib
 import os
 import tempfile
 import uuid
-from math import floor
 from unittest import mock
-from unittest.mock import call, MagicMock
 
 import pytest
 import sha3
@@ -33,10 +31,12 @@ from .utils import evm_snapshot, evm_revert, time_travel, TEST_KEYS
 
 class TestDeviseClient(object):
     @pytest.fixture(scope="function", autouse=True)
-    def setup_method(self, owner_client, client):
+    def setup_method(self, owner_client, client, token_wallet_client):
         self.client = client
         _ = owner_client
         self.snapshot_id = evm_snapshot(client)
+        # TODO Remove this and replace with real provisioning with ether in the tests
+        token_wallet_client.transfer(client.address, 10000000)
 
     def teardown_method(self, method):
         self.snapshot_id = evm_revert(self.snapshot_id, self.client)
@@ -57,130 +57,115 @@ class TestDeviseClient(object):
         address = account.recoverHash(message_hash, signature=signature)
         assert address.lower() == client.address.lower()
 
-    def test_buy_tokens(self, client):
-        """Tests that we can buy Devise tokens with ethers using a local primary key"""
-
-        old_tokens_balance = client.dvz_balance
-        ether_amount = .5
-        client.buy_eth_worth_of_tokens(ether_amount)
-        currentRate = client._token_sale_contract.functions.getCurrentRate().call()
-        new_tokens_balance = client.dvz_balance
-        tokens_purchased = ether_amount * currentRate
-
-        assert new_tokens_balance == old_tokens_balance + tokens_purchased
-
-    @pytest.mark.skipif(os.environ.get("JENKINS_BUILD", False), reason="Jenkins cannot create signed cloudfront urls!")
-    def test_buy_tokens_ledger(self, client_ledger):
-        """Tests that we can buy Devise tokens with Ledger nano s HD wallet"""
-        if client_ledger is None:
-            print('Skip this test!')
-            return
-
-        old_tokens_balance = client_ledger.dvz_balance
-        ether_amount = .5
-        client_ledger.buy_eth_worth_of_tokens(ether_amount)
-        currentRate = client_ledger._token_sale_contract.functions.getCurrentRate().call()
-        new_tokens_balance = client_ledger.dvz_balance
-        tokens_purchased = ether_amount * currentRate
-
-        assert new_tokens_balance == old_tokens_balance + tokens_purchased
-
-    @mock.patch('devise.base.getpass', return_value='password')
-    def test_buy_tokens_keyfile(self, _, client_local_keyfile):
-        """Tests that we can buy Devise tokens with ethers using a local encrypted key store file"""
-        old_tokens_balance = client_local_keyfile.dvz_balance
-        ether_amount = .5
-        client_local_keyfile.buy_eth_worth_of_tokens(ether_amount)
-        currentRate = client_local_keyfile._token_sale_contract.functions.getCurrentRate().call()
-        new_tokens_balance = client_local_keyfile.dvz_balance
-        tokens_purchased = ether_amount * currentRate
-
-        assert new_tokens_balance == old_tokens_balance + tokens_purchased
-
-    def test_buy_tokens_keyfile_with_password(self):
-        """Tests that we can buy Devise tokens with ethers using a local encrypted key store file"""
-        key_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'key_file.json')
-        client_local_keyfile = DeviseClient(key_file=key_path, password='password')
-        old_tokens_balance = client_local_keyfile.dvz_balance
-        ether_amount = .5
-        client_local_keyfile.buy_eth_worth_of_tokens(ether_amount)
-        currentRate = client_local_keyfile._token_sale_contract.functions.getCurrentRate().call()
-        new_tokens_balance = client_local_keyfile.dvz_balance
-        tokens_purchased = ether_amount * currentRate
-
-        assert new_tokens_balance == old_tokens_balance + tokens_purchased
-
     def test_provision_tokens(self, client):
         """Tests that we can send tokens to the clients contract using a local primary key"""
         tokens_amt = 500000
-        rate = client._token_sale_contract.functions.getCurrentRate().call()
-        ethers = (tokens_amt + 1) / rate
-        client.buy_eth_worth_of_tokens(ethers=ethers)
         old_balance = client.dvz_balance
-
         client.provision(tokens_amt)
         allow = client.dvz_balance_escrow
         assert allow == tokens_amt
         new_token_balance = client.dvz_balance
         assert round(new_token_balance, 6) == round(old_balance - tokens_amt, 6)
 
+    @mock.patch('devise.owner.DeviseOwner._get_eth_usd_price', return_value='201.56000000')
+    def test_provision_with_ether(self, _, client, owner_client, rate_setter):
+        owner_client.add_rate_setter(rate_setter.address)
+        rate_setter.set_eth_usd_rate()
+        client.provision_with_ether(1)
+        allow = client.dvz_balance_escrow
+        assert allow == 2015.6
+
+    @mock.patch('devise.owner.DeviseOwner._get_eth_usd_price', return_value='201.56000000')
+    def test_fund_account_ether(self, _, client, owner_client, rate_setter):
+        owner_client.add_rate_setter(rate_setter.address)
+        rate_setter.set_eth_usd_rate()
+        client.fund_account(amount=1, source='ETH', unit='ETH')
+        allow = client.dvz_balance_escrow
+        assert allow == 2015.6
+
+    @mock.patch('devise.owner.DeviseOwner._get_eth_usd_price', return_value='201.56000000')
+    def test_fund_account_ether_usd(self, _, client, owner_client, rate_setter):
+        owner_client.add_rate_setter(rate_setter.address)
+        rate_setter.set_eth_usd_rate()
+        client.fund_account(amount=201.56, source='ETH', unit='USD')
+        allow = client.dvz_balance_escrow
+        assert allow == 2015.6
+
+    @mock.patch('devise.owner.DeviseOwner._get_eth_usd_price', return_value='201.56000000')
+    def test_fund_account_ether_dvz(self, _, client, owner_client, rate_setter):
+        owner_client.add_rate_setter(rate_setter.address)
+        rate_setter.set_eth_usd_rate()
+        client.fund_account(amount=2015.6, source='ETH', unit='DVZ')
+        allow = client.dvz_balance_escrow
+        assert allow == 2015.6
+
+    def test_fund_account(self, client):
+        with pytest.raises(TypeError):
+            client.fund_account()
+        with pytest.raises(AssertionError):
+            client.fund_account(amount=1000, unit='GBP', source='ETH')
+
+    def test_fund_account_token(self, client):
+        client.fund_account(amount=1000, unit='DVZ', source='DVZ')
+        allow = client.dvz_balance_escrow
+        assert allow == 1000
+
+    def test_fund_account_token_usd(self, client):
+        client.fund_account(amount=100, unit='USD', source='DVZ')
+        allow = client.dvz_balance_escrow
+        assert allow == 1000
+
+    @mock.patch('devise.owner.DeviseOwner._get_eth_usd_price', return_value='100.00000000')
+    def test_fund_account_token_eth(self, _, client, owner_client, rate_setter):
+        owner_client.add_rate_setter(rate_setter.address)
+        rate_setter.set_eth_usd_rate()
+        client.fund_account(amount=1, unit='ETH', source='DVZ')
+        allow = client.dvz_balance_escrow
+        assert allow == 1000
+
     @mock.patch('devise.base.getpass', return_value='password')
     def test_provision_tokens_keyfile(self, _, client_local_keyfile):
         """Tests that we can send tokens to the clients contract using a local wallet and account"""
 
-        client_local_keyfile.buy_eth_worth_of_tokens(ethers=.5)
-        balance = client_local_keyfile.dvz_balance
-        client_local_keyfile.provision(balance)
+        client_local_keyfile.provision(1000000)
         new_allowance = client_local_keyfile.dvz_balance_escrow
-
-        assert balance > 0
-        assert new_allowance == balance
+        assert new_allowance == 1000000
 
     @mock.patch('devise.base.getpass', return_value='password')
     def test_provision_keyfile(self, _, client_local_keyfile):
         """Tests converting ethers into Devise tokens and provisioning the clients account with a private key/remote node
         """
-        client_local_keyfile.buy_eth_worth_of_tokens(ethers=.5)
-        client_local_keyfile.provision(client_local_keyfile.dvz_balance)
-        rate = client_local_keyfile._token_sale_contract.functions.getCurrentRate().call()
-        assert floor(client_local_keyfile.dvz_balance_escrow) == floor(.5 * rate)
+        client_local_keyfile.provision(1000000)
+        assert client_local_keyfile.dvz_balance_escrow == 1000000
 
     def test_withdraw_can_withdraw(self, client):
-        client.buy_eth_worth_of_tokens(ethers=.1)
-        client.provision(client.dvz_balance)
-        rate = client._token_sale_contract.functions.getCurrentRate().call()
-        expected_bal = .1 * rate
-        assert round(client.client_summary["dvz_balance_escrow"], 6) == round(expected_bal, 6)
-        client.withdraw(expected_bal)
+        client.provision(1000000)
+        assert round(client.client_summary["dvz_balance_escrow"], 6) == round(1000000, 6)
+        client.withdraw(1000000)
         assert client.client_summary["dvz_balance_escrow"] == 0
 
     def test_lease_all_updates_seats(self, client):
-        client.buy_eth_worth_of_tokens(ethers=1)
-        client.provision(client.dvz_balance)
+        client.provision(1000000)
         assert client.seats_available == 100
         client.lease_all(limit_price=10000, num_seats=10)
         assert client.seats_available == 90
 
     def test_lease_all_requires_enough_tokens(self, client):
-        client.buy_eth_worth_of_tokens(ethers=.01)
-        client.provision(client.dvz_balance)
+        client.provision(1000000)
         assert client.seats_available == 100
         client.lease_all(limit_price=10000, num_seats=10)
         assert client.seats_available == 90
 
     def test_account_summary(self, client):
         assert client.client_summary is None
-        client.buy_eth_worth_of_tokens(ethers=100)
-        rate = client._token_sale_contract.functions.getCurrentRate().call()
-        escrow_bal = 100 * rate
-        client.provision(escrow_bal)
+        client.provision(1000000)
         client.apply_for_power_user()
         client.request_historical_data_access()
         assert client.client_summary == {
             "client": client.address,
             "beneficiary": client.address,
-            "dvz_balance_escrow": escrow_bal,
-            "dvz_balance": client.dvz_balance,
+            "dvz_balance_escrow": 1000000,
+            "dvz_balance": 9000000,
             "last_term_paid": None,
             "power_user": True,
             "historical_data_access": True,
@@ -195,8 +180,7 @@ class TestDeviseClient(object):
 
     def test_is_power_user(self, client, owner_client):
         owner_client.set_power_user_fee(1)
-        client.buy_eth_worth_of_tokens(ethers=100)
-        client.provision(client.dvz_balance)
+        client.provision(1000000)
         assert not client.is_power_user
         client.apply_for_power_user()
         assert client.is_power_user
@@ -220,8 +204,7 @@ class TestDeviseClient(object):
 
     def test_get_all_renters(self, client):
         """Tests that we can query all current renter addresses from the smart contract"""
-        client.buy_eth_worth_of_tokens(ethers=1)
-        client.provision(client.dvz_balance)
+        client.provision(1000000)
         client.lease_all(10000, 10)
         balance = client.dvz_balance_escrow
         clients_list = client.get_all_renters()
@@ -229,7 +212,7 @@ class TestDeviseClient(object):
             'client': '0xA1C2684B68A98c9636FC22F3B4E4332eF35A2408',
             'beneficiary': '0xA1C2684B68A98c9636FC22F3B4E4332eF35A2408',
             'dvz_balance_escrow': balance,
-            'dvz_balance': 0.0,
+            'dvz_balance': 9000000.0,
             'last_term_paid': client.current_lease_term,
             'power_user': True,
             'historical_data_access': True,
@@ -243,7 +226,7 @@ class TestDeviseClient(object):
             'client': '0xA1C2684B68A98c9636FC22F3B4E4332eF35A2408',
             'beneficiary': '0xd4a6B94E45B8c0185e33F210f4F96bDAe40aa22E',
             'dvz_balance_escrow': balance,
-            'dvz_balance': 0.0,
+            'dvz_balance': 9000000.0,
             'last_term_paid': client.current_lease_term,
             'power_user': True,
             'historical_data_access': True,
@@ -252,15 +235,14 @@ class TestDeviseClient(object):
         }
 
     def test_get_all_clients(self, client):
-        client.buy_eth_worth_of_tokens(ethers=100)
-        client.provision(client.dvz_balance)
+        client.provision(1000000)
         balance = client.dvz_balance_escrow
         clients_list = client.get_all_clients()
         assert clients_list[0] == {
             'client': '0xA1C2684B68A98c9636FC22F3B4E4332eF35A2408',
             'beneficiary': '0xA1C2684B68A98c9636FC22F3B4E4332eF35A2408',
             'dvz_balance_escrow': balance,
-            'dvz_balance': 0.0,
+            'dvz_balance': 9000000.0,
             'last_term_paid': None,
             'power_user': True,
             'historical_data_access': True,
@@ -274,7 +256,7 @@ class TestDeviseClient(object):
             'client': '0xA1C2684B68A98c9636FC22F3B4E4332eF35A2408',
             'beneficiary': '0xd4a6B94E45B8c0185e33F210f4F96bDAe40aa22E',
             'dvz_balance_escrow': balance,
-            'dvz_balance': 0.0,
+            'dvz_balance': 9000000.0,
             'last_term_paid': None,
             'power_user': True,
             'historical_data_access': True,
@@ -351,7 +333,6 @@ class TestDeviseClient(object):
         master_node.add_lepton(lepton_hash, None, 1.5123456789123456789)
 
         # client 1 buys and provisions tokens
-        client.buy_eth_worth_of_tokens(2)
         client.provision(16000)
         assert client.get_all_bidders() == []
 
@@ -367,7 +348,6 @@ class TestDeviseClient(object):
 
         # Add another bidder leases the blockchain
         client2 = DeviseClient(private_key=TEST_KEYS[2])
-        client2.buy_eth_worth_of_tokens(2)
         client2.provision(16000)
         client2.lease_all(lease_prc + 1, 1)
         assert client.get_all_bidders(active=True) == [
@@ -384,9 +364,7 @@ class TestDeviseClient(object):
         master_node.add_lepton(lepton_hash, None, 1.5123456789123456789)
 
         # Buy enough tokens for 1 term
-        currentRate = client._token_sale_contract.functions.getCurrentRate().call()
-        client.buy_eth_worth_of_tokens(ethers=(15500 / currentRate))
-        client.provision(client.dvz_balance)
+        client.provision(15500)
         assert client.seats_available == 100
 
         # lease all, 10 seats
@@ -396,8 +374,7 @@ class TestDeviseClient(object):
         assert client.next_term_seats == 0
 
         # provision enough tokens for next term auction
-        client.buy_eth_worth_of_tokens(ethers=(15500 / currentRate))
-        client.provision(client.dvz_balance)
+        client.provision(1000000)
         assert client.next_term_seats == 10
         client.cancel_bid()
         assert client.next_term_seats == 0
@@ -419,58 +396,9 @@ class TestDeviseClient(object):
     @mock.patch('devise.base.getpass', return_value='password')
     def test_create_beneficiary(self, _, client):
         [ret, addr] = client.create_beneficiary()
-        assert ret == True
+        assert ret is True
         ben = client.beneficiary
         assert addr == ben
-
-    @mock.patch('devise.base.LedgerWallet')
-    def test_buy_tokens_ledger_mock(self, ledger_mock):
-        """Tests that we can buy Devise tokens with Ledger nano s HD wallet"""
-        test_client_account = "0xA1C2684B68A98c9636FC22F3B4E4332eF35A2408"
-        ledger = DeviseClient(account=test_client_account, auth_type='ledger')
-        old_tokens_balance = ledger.dvz_balance
-        ether_amount = .5
-        vrs = (
-            28,
-            2182719146884808318922065288388701482638595064358707342427872633327257261733,
-            46015294558581125017244029788985539581305398667308472361832920130849890183038)
-
-        ledger_mock().sign.return_value = vrs
-        ledger_mock().get_account_index.return_value = 0
-        ledger.w3.eth.estimateGas = MagicMock(return_value=400000)
-        ledger.w3.eth.generateGasPrice = MagicMock(return_value=100000000000)
-        ledger.buy_eth_worth_of_tokens(ether_amount)
-
-        assert ledger_mock().get_account_index.call_count == 1
-        ledger_mock().get_account_index.assert_has_calls([call(test_client_account)])
-
-        assert ledger_mock().sign.call_count == 1
-        ledger_mock().sign.assert_has_calls([call(
-            b"\xea\x80\x85\x17Hv\xe8\x00\x83\x07\xa1 \x94\t\x87\xee'By\xc6pu5\xfa\xee\x0e!5\x85\x7f<2\x91\x88\x06\xf0[Y\xd3\xb2\x00\x00\x80",
-            account_index=0)])
-
-        currentRate = ledger._token_sale_contract.functions.getCurrentRate().call()
-        new_tokens_balance = ledger.dvz_balance
-        tokens_purchased = ether_amount * currentRate
-
-        assert new_tokens_balance == old_tokens_balance + tokens_purchased
-
-    @pytest.mark.skipif(os.environ.get("JENKINS_BUILD", False),
-                        reason="Jenkins cannot access a ledger hardware wallet!")
-    def test_buy_tokens_ledger(self, client_ledger):
-        """Tests that we can buy Devise tokens with Ledger nano s HD wallet"""
-
-        if client_ledger is None:
-            pytest.skip('Ledger nano dongle not found!')
-
-        old_tokens_balance = client_ledger.dvz_balance
-        ether_amount = .5
-        client_ledger.buy_eth_worth_of_tokens(ether_amount)
-        currentRate = client_ledger._token_sale_contract.functions.getCurrentRate().call()
-        new_tokens_balance = client_ledger.dvz_balance
-        tokens_purchased = ether_amount * currentRate
-
-        assert new_tokens_balance == old_tokens_balance + tokens_purchased
 
     def test_client_call_only(self, client):
         blank_client = DeviseClient()
@@ -478,8 +406,8 @@ class TestDeviseClient(object):
         assert blank_client.rent_per_seat_current_term == client.rent_per_seat_current_term
         assert blank_client.indicative_rent_per_seat_next_term == client.indicative_rent_per_seat_next_term
         assert blank_client.total_incremental_usefulness == client.total_incremental_usefulness
-        with raises(ValueError):
-            blank_client.buy_tokens(1000)
+        with raises(AssertionError):
+            blank_client.provision(1000)
 
     def test_transfer_ether(self, client):
         client2 = DeviseClient(private_key=TEST_KEYS[2])
@@ -490,7 +418,6 @@ class TestDeviseClient(object):
     def test_get_client_address(self, client):
         # current client is not a money account => never provisioned
         assert client.get_client_address(client.address) is None
-        client.buy_tokens(100000)
         client.provision(100000)
         # client is not a current renter
         assert client.client_summary["current_term_seats"] == 0
@@ -503,3 +430,36 @@ class TestDeviseClient(object):
         # once again from the DeviseClient of the beneficiary
         client_beneficiary = DeviseClient(private_key=TEST_KEYS[2])
         assert client_beneficiary.get_client_address(client_beneficiary.address) == client.address
+
+    def test_eth_usd_rate(self, client):
+        rate = client.eth_usd_rate
+        assert rate == 0
+
+    def test_eth_dvz_rate(self, client):
+        rate = client.eth_dvz_rate
+        assert rate == 0
+
+    def test_provision_on_behalf_of(self, client):
+        recipient_client = DeviseClient(private_key=TEST_KEYS[2])
+        sender_dvz_bal = client.dvz_balance
+        prev_bal = recipient_client.dvz_balance
+        client.provision_on_behalf_of(recipient_client.address, 1000)
+        assert client.address != recipient_client.address
+        assert recipient_client.dvz_balance_escrow == 1000
+        assert recipient_client.dvz_balance == prev_bal
+        assert client.dvz_balance == sender_dvz_bal - 1000
+
+        client.provision_on_behalf_of(recipient_client.address, 1)
+        assert recipient_client.dvz_balance_escrow == 1001
+        assert client.dvz_balance == sender_dvz_bal - 1001
+        assert recipient_client.client_summary == {
+            'beneficiary': recipient_client.address,
+            'client': recipient_client.address,
+            'current_term_seats': 0,
+            'dvz_balance': prev_bal,
+            'dvz_balance_escrow': 1001.0,
+            'historical_data_access': True,
+            'indicative_next_term_seats': 0,
+            'last_term_paid': None,
+            'power_user': True
+        }
