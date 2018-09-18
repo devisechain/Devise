@@ -14,7 +14,7 @@ const ETHER_PRECISION = 10 ** 18;
 
 // The following code is to accommodate using jQuery in Node.js
 const GITHUB_USERNAME = 'devisechain';
-const REPO_VERSION = 'bd9251f564a672e8f4f01ddd7239297b2ef88dda';
+const REPO_VERSION = '6c5e4852045522a416bea23cc7a816b1ae79b668';
 const CDN_ROOT = 'https://cdn.jsdelivr.net/gh/' + GITHUB_USERNAME + '/Devise@' + REPO_VERSION + '/config/';
 const CONFIG_URL = 'https://config.devisefoundation.org/config.json';
 
@@ -89,47 +89,6 @@ class BaseDeviseClient extends BaseEthereumClient {
     async init_contracts() {
         const token_abi = get_contract_abi('devise_token');
         let rental_abi = get_contract_abi('devise_rental_proxy');
-        rental_abi.push({
-                "constant": true,
-                "inputs": [],
-                "name": "rateSetter",
-                "outputs": [
-                    {
-                        "name": "",
-                        "type": "address"
-                    }
-                ],
-                "payable": false,
-                "stateMutability": "view",
-                "type": "function"
-            }, {
-                "constant": true,
-                "inputs": [],
-                "name": "RATE_USD_DVZ",
-                "outputs": [
-                    {
-                        "name": "",
-                        "type": "uint256"
-                    }
-                ],
-                "payable": false,
-                "stateMutability": "view",
-                "type": "function"
-            }, {
-                "constant": true,
-                "inputs": [],
-                "name": "rateETHUSD",
-                "outputs": [
-                    {
-                        "name": "",
-                        "type": "uint256"
-                    }
-                ],
-                "payable": false,
-                "stateMutability": "view",
-                "type": "function"
-            }
-        );
         const contract_address = get_contract_address();
         const network_id = await this._get_network_id();
         this._token_contract = new this.web3.eth.Contract(token_abi, contract_address[network_id].DEVISE_TOKEN);
