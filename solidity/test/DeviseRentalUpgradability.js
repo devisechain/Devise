@@ -1,9 +1,10 @@
 const DeviseRentalProxy = artifacts.require('DeviseRentalProxy');
 const Rental_V0 = artifacts.require('./test/DeviseRentalImplTest');
 const DeviseToken = artifacts.require("./DeviseToken");
-const DeviseTokenSale = artifacts.require("./DeviseTokenSaleBase");
 const DateTime = artifacts.require("./DateTime");
 const DeviseEternalStorage = artifacts.require("./DeviseEternalStorage");
+const {transferTokens} = require('./test-utils');
+
 const leptons = require('./leptons');
 
 contract('DeviseRentalUpgradability', (accounts) => {
@@ -11,8 +12,8 @@ contract('DeviseRentalUpgradability', (accounts) => {
     let impl_v0;
     let rental_v0;
     let proxyOwner;
+    let tokenWallet;
     let pitaiWallet;
-    let tokensale;
     let token;
     let estor;
     let dateutils;
@@ -24,21 +25,13 @@ contract('DeviseRentalUpgradability', (accounts) => {
             pitaiWallet = accounts[1];
             const cap = 10 ** 9 * 10 ** 18;
             token = await DeviseToken.new(cap, {from: proxyOwner});
-            const initialRate = new web3.BigNumber(16000);
-            const finalRate = new web3.BigNumber(8000);
-            const blockNumber = web3.eth.blockNumber;
-            const openingTime = web3.eth.getBlock(blockNumber).timestamp;
-            const closingTime = openingTime + 360 * 24 * 60 * 60;
-            tokensale = await DeviseTokenSale.new(proxyOwner, initialRate, finalRate, openingTime, closingTime, token.address, {from: proxyOwner});
-            const tokenWallet = await tokensale.tokenWallet.call();
+            tokenWallet = proxyOwner;
             // mint 1 billion tokens for token sale
             const saleAmount = 1 * 10 ** 9 * 10 ** 6;
             await token.mint(tokenWallet, saleAmount);
-            await token.approve(tokensale.address, saleAmount, {from: tokenWallet});
             dateutils = await DateTime.new({from: proxyOwner});
             estor = await DeviseEternalStorage.new();
             proxy = await DeviseRentalProxy.new(token.address, dateutils.address, estor.address, 0, {from: proxyOwner});
-            await tokensale.setRentalProxy(proxy.address);
             await token.approve(proxy.address, 1000000000000000000000000, {from: pitaiWallet});
             impl_v0 = await Rental_V0.new({from: proxyOwner});
             console.log("logic contract implementation address ", impl_v0.address);
@@ -144,7 +137,7 @@ contract('DeviseRentalUpgradability', (accounts) => {
                     assert.equal(owner, proxyOwner);
 
                     const client = accounts[2];
-                    await tokensale.sendTransaction({from: client, value: web3.toWei(5, "ether"), gas: 1000000});
+                    await transferTokens(token, rental_v0, tokenWallet, client, 0.0005);
                     await token.approve(rental_v0.address, 1000000, {from: client});
                     await rental_v0.setEscrowWallet(pitaiWallet, {from: proxyOwner});
                     await rental_v0.provision(1000000, {from: client});
@@ -186,7 +179,7 @@ contract('DeviseRentalUpgradability', (accounts) => {
                 it("Retains the same information after upgrade", async () => {
                     const client = accounts[2];
                     await proxy.upgradeTo(impl_v0.address, {from: proxyOwner});
-                    await tokensale.sendTransaction({from: client, value: web3.toWei(5, "ether"), gas: 1000000});
+                    await transferTokens(token, rental_v0, tokenWallet, client, 0.0005);
                     await token.approve(rental_v0.address, 1000000, {from: client});
                     await rental_v0.setEscrowWallet(pitaiWallet, {from: proxyOwner});
                     await rental_v0.provision(10000, {from: client});

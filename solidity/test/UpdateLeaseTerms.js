@@ -1,11 +1,10 @@
-const DeviseTokenSale = artifacts.require("./DeviseTokenSaleBase");
 const DeviseRentalBase = artifacts.require("./DeviseRentalProxy");
 const DeviseEternalStorage = artifacts.require("./DeviseEternalStorage");
 const DeviseRental_v1 = artifacts.require("./test/DeviseRentalImplTest");
 const DeviseToken = artifacts.require("./DeviseToken");
 const DateTime = artifacts.require("./DateTime");
 const moment = require('moment');
-const {timeTravel, evmSnapshot, evmRevert, timestampToDate, assertContractState} = require('./test-utils');
+const {timeTravel, evmSnapshot, evmRevert, timestampToDate, assertContractState, transferTokens} = require('./test-utils');
 const leptons = require('./leptons');
 const assertRevert = require('./helpers/assertRevert');
 
@@ -14,7 +13,7 @@ const escrowWallet = web3.eth.accounts[1];
 const revenueWallet = web3.eth.accounts[2];
 const clients = web3.eth.accounts.slice(3);
 let token;
-let tokensale;
+let tokenWallet;
 let rental;
 let proxy;
 let initialStateSnapshotId = 0;
@@ -28,24 +27,16 @@ async function setupFixtures() {
     // Setup all the contracts
     const cap = 10 * 10 ** 9 * 10 ** 6;
     token = await DeviseToken.new(cap, {from: pitai});
-    const initialRate = new web3.BigNumber(16000);
-    const finalRate = new web3.BigNumber(8000);
-    const blockNumber = web3.eth.blockNumber;
-    const openingTime = web3.eth.getBlock(blockNumber).timestamp;
-    const closingTime = openingTime + 360 * 24 * 60 * 60;
-    tokensale = await DeviseTokenSale.new(pitai, initialRate, finalRate, openingTime, closingTime, token.address, {from: pitai});
-    const tokenWallet = await tokensale.tokenWallet.call();
+    tokenWallet = pitai;
     // mint 1 billion tokens for token sale
     const saleAmount = 1 * 10 ** 9 * 10 ** 6;
     await token.mint(tokenWallet, saleAmount);
-    await token.approve(tokensale.address, saleAmount, {from: tokenWallet});
     dateTime = await DateTime.deployed();
     estor = await DeviseEternalStorage.new();
     // Create new upgradeable contract frontend (proxy)
     proxy = await DeviseRentalBase.new(token.address, dateTime.address, estor.address, 0, {from: pitai});
     // Set it's implementation version
     await proxy.upgradeTo((await DeviseRental_v1.new()).address);
-    await tokensale.setRentalProxy(proxy.address);
     // Use implementation functions with proxy address
     rental = DeviseRental_v1.at(proxy.address);
     rental._token = token;
@@ -68,11 +59,7 @@ async function setupFixtures() {
     await rental.addLepton(leptons[5], leptons[4], 1000000 * (1));
     // Some clients buy tokens and approve transfer to rental contract
     const ether_amount = 5000;
-    await Promise.all(clients.slice(0, 11).map(async client => await tokensale.sendTransaction({
-        from: client,
-        value: web3.toWei(ether_amount, "ether"),
-        gas: 1000000
-    })));
+    await Promise.all(clients.slice(0, 11).map(async client => await transferTokens(token, rental, tokenWallet, client, ether_amount)));
     await Promise.all(clients.slice(0, 11).map(async client => await token.approve(rental.address, 100 * millionDVZ * microDVZ, {from: client})));
     // move forward 1 month
     await timeTravel(86400 * 31);
@@ -696,8 +683,9 @@ contract("UpdateLeaseTerms", function () {
         const client_bid2 = 20 * 10 ** 3 * microDVZ;
         await rental.leaseAll(client_bid1, 5, {from: client1});
         await rental.leaseAll(client_bid2, 7, {from: client2});
-        const secondClient = await rental.getHighestBidder.call();
-        const firstClient = await rental.getNextHighestBidder.call(secondClient[0]);
+        const bidders = await rental.getAllBidders.call();
+        const secondClient = [bidders[0][0], bidders[1][0], bidders[2][0]];
+        const firstClient = [bidders[0][1], bidders[1][1], bidders[2][1]];
         assert.equal(secondClient[0], client2);
         assert.equal(secondClient[1].toNumber(), 7);
         assert.equal(secondClient[2].toNumber(), client_bid2);

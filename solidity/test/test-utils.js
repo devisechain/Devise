@@ -153,6 +153,11 @@ const assertContractSanity = async function (token) {
     await assertTotalIncrementalUsefulnessMatchesAllLeptons.bind(this)();
 };
 
+const transferTokens = async function (token, rental, tokenWallet, client, ethers) {
+    // assuming eth to token rate of 16000 for test purposes
+    return await token.transfer(client, ethers * 16000 * 1000000, {from: tokenWallet});
+};
+
 module.exports = {
     "timeTravel": async time => {
         await web3.currentProvider.send({
@@ -187,6 +192,7 @@ module.exports = {
         d.setUTCSeconds(timestamp);
         return d;
     },
+    "transferTokens": transferTokens,
     initAssertRevenueEquals: initAssertRevenueEquals,
     initAssertEscrowEquals: initAssertEscrowEquals,
     assertContractState: async function ({expectedEscrow, expectedRevenue, expectedClients, expectedRenters, expectedBids, expectedRent, expectedNextTermRent}) {

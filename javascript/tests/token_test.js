@@ -19,34 +19,32 @@ describe('DeviseTokenTests', function () {
         assert.isAtLeast(total_supply, 250 * 10 ** 6);
     });
     it('Allowance should be zero by default', async () => {
-        const owner = '0x0';
-        const spender = '0x0';
+        const owner = '0x99429f64cf4d5837620dcc293c1a537d58729b68';
+        const spender = '0xbA809B53AD58dd87903E07b21e6cd00683d62252';
         const allowance = await token.allowance(owner, spender);
         assert.equal(allowance, 0);
     });
     it('Allowance should be non-zero for specific accounts', async () => {
-        const owner = await token._token_sale_contract.methods.wallet().call();
-        const spender = token._token_sale_contract._address;
+        const owner = await token._rental_contract.methods.escrowWallet().call();
+        const spender = token._rental_contract._address;
         const allowance = await token.allowance(owner, spender);
         assert.isAtLeast(allowance, 3000);
     });
     it('Balance should be zero for random account', async () => {
-        const addr = '0x0';
+        const addr = '0x99429f64cf4d5837620dcc293c1a537d58729b68';
         const bal = await token.balance_of(addr);
         assert.equal(bal, 0);
     });
-    it('Balance should be non-zero for specific account', async () => {
-        const addr = await token._token_sale_contract.methods.wallet().call();
+    // TODO enable this once we can query tokenWallet on rental contract
+    it.skip('Balance should be non-zero for specific account', async () => {
+        const addr = await token._rental_contract.methods.escrowWallet().call();
         const bal = await token.balance_of(addr);
         assert.isAtLeast(bal, 250 * 10 ** 6);
     });
-    it('Balance should be non-zero for token wallet account', async () => {
+    // TODO this should be enabled when the token wallet is added to rental contract
+    it.skip('Balance should be non-zero for token wallet account', async () => {
         const bal = await token.balance_of_token_wallet();
         assert.isAtLeast(bal, 250 * 10 ** 6);
-    });
-    it('Allowance should be non-zero for token sale contract', async () => {
-        const allow = await token.allowance_of_token_sale_contract();
-        assert.isAtLeast(allow, 3000);
     });
     it('get_owner_eth_balance should not throw exception', async () => {
         const bal = await token.get_owner_eth_balance();

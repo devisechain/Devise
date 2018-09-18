@@ -101,37 +101,16 @@ How To Access The Devise Alternative Exchange
 In order to access the Devise alternative exchange, you need to i) have enough Devise tokens (DVZ) in your account, ii) submit a bid, and iii) request data from the API if your bid is successful.
 
 
-Our token sale is currently restricted to whitelisted users. To be whitelisted, send us an email at devise_beta@pit.ai. Once you've been whitelisted, here are a few ways of buying DVZ tokens:
+To fund your account with us, run:
 
 .. code-block:: python
 
-    # Example 1: Buy 1,500,000 DVZ tokens
-    status = devise_client.buy_tokens(1500000)
+    # Fund your account with qty ETH worth of DVZ tokens (10 DVZ = 1 US Dollar, conversion rate updated hourly and may not match current ETH price)
+    qty = 1000
+    status = devise_client.fund_account(ether=qty)
 
-    # Example 2: Buy 150 ethers worth of DVZ tokens
-    status = devise_client.buy_eth_worth_of_tokens(150)
-
-    # Example 3: Buy 75,000 USD worth of DVZ tokens
-    # The ETH/USD rate is retrieved from GDAX to infer the ETH equivalent of your
-    # USD amount, which you need to have in your wallet as we only accept ETH.
-    status = devise_client.buy_usd_worth_of_tokens(75000)
-
-
-To transfer 1,000,000 DVZ tokens from your wallet to your escrow account with us, run
-
-.. code-block:: python
-
-    # Record your current wallet DVZ balance
-    dvz_balance = devise_client.dvz_balance
-
-    # Provision your escrow account
-    status = devise_client.provision(1000000)
-
-    # Check that your tokens made it
-    assert devise_client.dvz_balance_escrow >= 1000000
-
-    # Check that your wallet balance has dropped by 1,000,000
-    assert devise_client.dvz_balance == dvz_balance-1000000
+    # Check your remaining escrow balance in DVZ tokens
+    remaining = devise_client.dvz_balance_escrow
 
 
 If needed, you can request historical data to assess value-add:

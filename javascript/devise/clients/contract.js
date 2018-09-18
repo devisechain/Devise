@@ -78,6 +78,36 @@ class RentalContract extends BaseDeviseClient {
     }
 
     /**
+     * Query the current ETH/USD rate
+     * @returns {Promise<number>}
+     */
+    async get_eth_usd_rate() {
+        let rate = await this._rental_contract.methods.rateETHUSD().call();
+        rate = parseInt(rate);
+        return rate / 10 ** 8;
+    }
+
+
+    /**
+     * Query the constant USD/DVZ rate
+     * @returns {Promise<number>}
+     */
+    async get_usd_dvz_rate() {
+        let rate = await this._rental_contract.methods.RATE_USD_DVZ().call();
+        return parseInt(rate);
+    }
+
+
+    /**
+     * Query the current ETH/DVZ rate
+     * @returns {Promise<number>}
+     */
+    async get_eth_dvz_rate() {
+        const rate = await this.get_eth_usd_rate();
+        return rate * await this.get_usd_dvz_rate();
+    }
+
+    /**
      * Queries the Devise rental contract for the rent per seat for the current lease term
      * @returns {Promise<number>}
      */

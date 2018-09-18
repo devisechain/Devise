@@ -10,7 +10,6 @@ if (typeof XMLHttpRequest === 'undefined') {
 }
 
 let Web3 = require('web3');
-const assert = require('assert');
 const ETHER_PRECISION = 10 ** 18;
 
 // The following code is to accommodate using jQuery in Node.js
@@ -61,7 +60,8 @@ class BaseEthereumClient {
         account = account || '0x0000000000000000000000000000000000000000';
         const provider = new Web3.providers.HttpProvider(node_url);
         this.web3 = new Web3(provider);
-        assert(this.web3.eth.net, "Please use a version of web3.js >= 1.0.0.");
+        if (this.web3.eth.net === undefined)
+            throw "Please use a version of web3.js >= 1.0.0.";
 
         this.account = account;
         this.address = this.account;
@@ -88,12 +88,51 @@ class BaseDeviseClient extends BaseEthereumClient {
 
     async init_contracts() {
         const token_abi = get_contract_abi('devise_token');
-        const token_sale_abi = get_contract_abi('devise_token_sale');
-        const rental_abi = get_contract_abi('devise_rental_proxy');
+        let rental_abi = get_contract_abi('devise_rental_proxy');
+        rental_abi.push({
+                "constant": true,
+                "inputs": [],
+                "name": "rateSetter",
+                "outputs": [
+                    {
+                        "name": "",
+                        "type": "address"
+                    }
+                ],
+                "payable": false,
+                "stateMutability": "view",
+                "type": "function"
+            }, {
+                "constant": true,
+                "inputs": [],
+                "name": "RATE_USD_DVZ",
+                "outputs": [
+                    {
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "payable": false,
+                "stateMutability": "view",
+                "type": "function"
+            }, {
+                "constant": true,
+                "inputs": [],
+                "name": "rateETHUSD",
+                "outputs": [
+                    {
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "payable": false,
+                "stateMutability": "view",
+                "type": "function"
+            }
+        );
         const contract_address = get_contract_address();
         const network_id = await this._get_network_id();
         this._token_contract = new this.web3.eth.Contract(token_abi, contract_address[network_id].DEVISE_TOKEN);
-        this._token_sale_contract = new this.web3.eth.Contract(token_sale_abi, contract_address[network_id].DEVISE_TOKEN_SALE);
         this._rental_contract = new this.web3.eth.Contract(rental_abi, contract_address[network_id].DEVISE_RENTAL);
     }
 }

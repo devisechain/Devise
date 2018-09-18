@@ -56,19 +56,20 @@ class DeviseToken extends BaseDeviseClient {
      * @returns {Promise<number>}
      */
     async balance_of_token_wallet() {
-        const owner = await this._token_sale_contract.methods.tokenWallet().call();
+        const owner = await this._rental_contract.methods.tokenWallet().call();
         return await this.balance_of(owner);
     }
 
-    /**
-     * Utility function to query the allowance of the token sale contract
-     * @returns {Promise<number>}
-     */
-    async allowance_of_token_sale_contract() {
-        const owner = await this._token_sale_contract.methods.tokenWallet().call();
-        const spender = await this._token_sale_contract._address;
-        return await this.allowance(owner, spender);
-    }
+    // TODO replace with allowance of rental contract from tokenSaleWallet
+    // /**
+    //  * Utility function to query the allowance of the token sale contract
+    //  * @returns {Promise<number>}
+    //  */
+    // async allowance_of_token_sale_contract() {
+    //     const owner = await this._rental_contract.methods.tokenWallet().call();
+    //     const spender = await this._token_sale_contract._address;
+    //     return await this.allowance(owner, spender);
+    // }
 
     /**
      * Utility function to query the Ether balance of the contract owner

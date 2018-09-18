@@ -1,12 +1,11 @@
 (function () {
     const DeviseToken = artifacts.require("./DeviseToken");
-    const DeviseTokenSale = artifacts.require("./DeviseTokenSaleBase");
     const DateTime = artifacts.require("./DateTime");
     const DeviseEternalStorage = artifacts.require("./DeviseEternalStorage");
     const DeviseRentalProxy = artifacts.require("./DeviseRentalProxy");
     const DeviseRentalImpl = artifacts.require("./DeviseRentalImpl");
     const leptons = require('./leptons');
-    const {timeTravel, evmSnapshot, evmRevert, timestampToDate} = require('./test-utils');
+    const {timeTravel, evmSnapshot, evmRevert, transferTokens, timestampToDate} = require('./test-utils');
     const moment = require('moment');
 
     const pitai = web3.eth.accounts[0];
@@ -16,14 +15,11 @@
     const revenueWallet = web3.eth.accounts[4];
     const clients = web3.eth.accounts.slice(4);
     const cap = 10 * 10 ** 9 * 10 ** 6;
-    const initialRate = new web3.BigNumber(16000);
-    const finalRate = new web3.BigNumber(8000);
     const microDVZ = 10 ** 6;
     const millionDVZ = 10 ** 6;
     const IUDecimals = 10 ** 6;
 
     let token;
-    let tokensale;
     let rentalProxy;
 
     async function getProratedDues(seats, iu, prc) {
@@ -35,17 +31,9 @@
     }
 
     async function getNumberOfBidders(rentalProxy) {
-        let count = 0;
-        let bidder = await rentalProxy.getHighestBidder.call();
-        while (bidder[0] != '0x0000000000000000000000000000000000000000') {
-            count++;
-            const addr = bidder[0];
-            try {
-                bidder = await rentalProxy.getNextHighestBidder.call(addr);
-            } catch (error) {
-                break;
-            }
-        }
+        let count;
+        const bidders = await rentalProxy.getAllBidders.call();
+        count = bidders[0].length;
         return count;
     }
 
@@ -53,16 +41,10 @@
         beforeEach(async () => {
             token = await DeviseToken.new(cap, {from: pitai});
 
-            const blockNumber = web3.eth.blockNumber;
-            const openingTime = web3.eth.getBlock(blockNumber).timestamp;
-            const closingTime = openingTime + 30 * 24 * 60 * 60;
-            tokensale = await DeviseTokenSale.new(tokenWallet, initialRate, finalRate, openingTime, closingTime, token.address, {from: pitai});
-
             await token.transferOwnership(tokenOwner, {from: pitai});
             // mint 1 billion tokens for token sale
             const saleAmount = 1 * 10 ** 9 * 10 ** 6;
             await token.mint(tokenWallet, saleAmount, {from: tokenOwner});
-            await token.approve(tokensale.address, saleAmount, {from: tokenWallet});
 
             const dateutils = await DateTime.new({from: pitai});
             const dstore = await DeviseEternalStorage.new({from: pitai});
@@ -73,7 +55,6 @@
             const rentalImpl = await DeviseRentalImpl.new({from: pitai});
 
             await proxy.upgradeTo(rentalImpl.address, {from: pitai});
-            await tokensale.setRentalProxy(proxy.address);
 
             // rentalProxy will have all the interfaces of DeviseRentalImpl contract
             // future function calls are directly from rentalProxy
@@ -91,11 +72,8 @@
             const rev_amount = 10 * millionDVZ * microDVZ;
             await token.approve(rentalProxy.address, rev_amount, {from: escrowWallet});
             const ether_amount = 1000;
-            await tokensale.sendTransaction({
-                from: client,
-                value: web3.toWei(ether_amount, "ether"),
-                gas: 1000000
-            });
+
+            await transferTokens(token, rentalProxy, tokenWallet, client, ether_amount);
             const dvz_amount = await token.balanceOf(client);
             await token.approve(rentalProxy.address, dvz_amount, {from: client});
             await rentalProxy.provision(dvz_amount, {from: client});
@@ -130,11 +108,7 @@
 
                 // purchase a lot of tokens
                 const ether_amount = 3000;
-                await tokensale.sendTransaction({
-                    from: client,
-                    value: web3.toWei(ether_amount, "ether"),
-                    gas: 1000000
-                });
+                await transferTokens(token, rentalProxy, tokenWallet, client, ether_amount);
             });
 
             it("Should be charged for the minimum if the client can afford it", async () => {

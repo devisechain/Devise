@@ -1,8 +1,6 @@
 import os
 
 # For unit tests, use local ganache test network
-from devise.owner.token_sale_owner import TokenSaleOwner
-
 os.environ["ETHEREUM_NETWORK"] = "ganache"
 
 import pytest
@@ -11,7 +9,6 @@ from web3 import Web3
 
 from devise import DeviseClient, MasterNode
 from devise.clients.token import DeviseToken
-from devise.clients.token_sale import TokenSale
 from devise.owner import DeviseOwner
 from devise.owner.token_owner import DeviseTokenOwner
 from .utils import TEST_KEYS
@@ -98,33 +95,21 @@ def token_client():
 
 
 @pytest.fixture()
-def token_sale_client():
-    account = Web3().eth.accounts[0]
-    client = TokenSale(private_key=TEST_KEYS[0])
-
-    net_id = client.w3.version.network
-    if net_id == "1":
-        raise RuntimeError("Cowardly refusing to run tests against MainNet!!")
-
-    return client
-
-
-@pytest.fixture()
-def token_sale_owner():
-    account = Web3().eth.accounts[0]
-    client = TokenSaleOwner(private_key=TEST_KEYS[0])
-
-    net_id = client.w3.version.network
-    if net_id == "1":
-        raise RuntimeError("Cowardly refusing to run tests against MainNet!!")
-
-    return client
-
-
-@pytest.fixture()
 def master_node():
     """Devise Client fixture created using an account's private key"""
     client = MasterNode(private_key=TEST_KEYS[0])
+
+    net_id = client.w3.version.network
+    if net_id == "1":
+        raise RuntimeError("Cowardly refusing to run tests against MainNet!!")
+
+    return client
+
+
+@pytest.fixture()
+def rate_setter():
+    """Devise Client fixture created for setting rate"""
+    client = DeviseOwner(private_key=TEST_KEYS[5])
 
     net_id = client.w3.version.network
     if net_id == "1":
@@ -146,10 +131,13 @@ def client_local_pk():
 
 
 @pytest.fixture()
-def client_local_keyfile():
+def client_local_keyfile(token_wallet_client):
     """Devise Client fixture created using an account's private key"""
     key_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'key_file.json')
     client = DeviseClient(key_file=key_path)
+
+    # TODO Remove this and replace with real provisioning with ether in the tests
+    token_wallet_client.transfer(client.address, 10000000)
 
     net_id = client.w3.version.network
     if net_id == "1":

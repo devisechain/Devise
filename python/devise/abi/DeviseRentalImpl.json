@@ -20,6 +20,20 @@
   {
     "constant": true,
     "inputs": [],
+    "name": "tokenSaleWallet",
+    "outputs": [
+      {
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
     "name": "totalSeats",
     "outputs": [
       {
@@ -104,6 +118,20 @@
   {
     "constant": true,
     "inputs": [],
+    "name": "rateETHUSD",
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
     "name": "paused",
     "outputs": [
       {
@@ -123,6 +151,20 @@
       {
         "name": "",
         "type": "string"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "RATE_USD_DVZ",
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256"
       }
     ],
     "payable": false,
@@ -173,6 +215,20 @@
   },
   {
     "constant": true,
+    "inputs": [],
+    "name": "ROLE_RATE_SETTER",
+    "outputs": [
+      {
+        "name": "",
+        "type": "string"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
     "inputs": [
       {
         "name": "",
@@ -198,6 +254,20 @@
       {
         "name": "",
         "type": "uint256"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "rateSetter",
+    "outputs": [
+      {
+        "name": "",
+        "type": "address"
       }
     ],
     "payable": false,
@@ -474,6 +544,23 @@
     "inputs": [
       {
         "indexed": false,
+        "name": "timestamp",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "name": "rate",
+        "type": "uint256"
+      }
+    ],
+    "name": "RateUpdated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
         "name": "addr",
         "type": "address"
       },
@@ -502,6 +589,34 @@
     ],
     "name": "RoleRemoved",
     "type": "event"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "rate",
+        "type": "uint256"
+      }
+    ],
+    "name": "setRateETHUSD",
+    "outputs": [],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "_tokenSaleWallet",
+        "type": "address"
+      }
+    ],
+    "name": "setTokenWallet",
+    "outputs": [],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
   },
   {
     "constant": false,
@@ -631,6 +746,33 @@
     "outputs": [],
     "payable": false,
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "recipient",
+        "type": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "provisionOnBehalfOf",
+    "outputs": [],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [],
+    "name": "provisionWithEther",
+    "outputs": [],
+    "payable": true,
+    "stateMutability": "payable",
     "type": "function"
   },
   {
@@ -878,7 +1020,35 @@
         "type": "address"
       }
     ],
+    "name": "addRateSetter",
+    "outputs": [],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "addr",
+        "type": "address"
+      }
+    ],
     "name": "removeMasterNode",
+    "outputs": [],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "addr",
+        "type": "address"
+      }
+    ],
+    "name": "removeRateSetter",
     "outputs": [],
     "payable": false,
     "stateMutability": "nonpayable",
@@ -933,55 +1103,6 @@
     "outputs": [],
     "payable": false,
     "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [],
-    "name": "getHighestBidder",
-    "outputs": [
-      {
-        "name": "",
-        "type": "address"
-      },
-      {
-        "name": "",
-        "type": "uint8"
-      },
-      {
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "payable": false,
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [
-      {
-        "name": "_client",
-        "type": "address"
-      }
-    ],
-    "name": "getNextHighestBidder",
-    "outputs": [
-      {
-        "name": "",
-        "type": "address"
-      },
-      {
-        "name": "",
-        "type": "uint8"
-      },
-      {
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "payable": false,
-    "stateMutability": "view",
     "type": "function"
   },
   {

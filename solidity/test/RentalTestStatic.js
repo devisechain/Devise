@@ -2,7 +2,6 @@
 /* global assert, artifacts, it, contract, web3*/
 
 const crypto = require('crypto');
-const DeviseTokenSale = artifacts.require("./DeviseTokenSaleBase");
 const DeviseRentalImpl = artifacts.require("./test/DeviseRentalImplTest");
 const DeviseRentalImplV2 = artifacts.require("./DeviseRentalImplV3");
 const DeviseToken = artifacts.require("./DeviseToken");
@@ -11,6 +10,7 @@ const DeviseRentalProxy = artifacts.require("./DeviseRentalProxy");
 const DateTime = artifacts.require("./DateTime");
 const assertRevert = require('./helpers/assertRevert');
 const DeviseEternalStorage = artifacts.require("./DeviseEternalStorage");
+const {transferTokens} = require('./test-utils');
 
 // parameters to be set by tests
 // default: num_clients = 6
@@ -20,7 +20,6 @@ let num_st_blockchain = 4;
 
 let token;
 let dateutils;
-let tokensale;
 let rental_v2;
 let rentalProxy;
 let rentalProxy_v2;
@@ -48,25 +47,17 @@ let bids = [];
 let seats = [];
 let microDVZ = 10 ** 6;
 let millionDVZ = 10 ** 6;
-const initialRate = new web3.BigNumber(16000);
-const finalRate = new web3.BigNumber(8000);
 
 async function setupFixtures() {
     // test case 1: DeviseToken contract deployed
     const cap = 10 * 10 ** 9 * 10 ** 6;
     token = await DeviseToken.new(cap, {from: pitai});
 
-    const blockNumber = web3.eth.blockNumber;
-    const openingTime = web3.eth.getBlock(blockNumber).timestamp;
-    const closingTime = openingTime + 360 * 24 * 60 * 60;
-    tokensale = await DeviseTokenSale.new(tokenWallet, initialRate, finalRate, openingTime, closingTime, token.address, {from: pitai});
     assert.notEqual(token.address, 0x0, "DeviseToken contract address should not be NULL.");
     assert.notEqual(token.address, 0x0, "DeviseToken contract address should not be NULL.");
-    assert.notEqual(tokensale.address, 0x0, "DeviseTokenSale contract address should not be NULL.");
     // mint 1 billion tokens for token sale
     const saleAmount = 1 * 10 ** 9 * 10 ** 6;
     await token.mint(tokenWallet, saleAmount);
-    await token.approve(tokensale.address, saleAmount, {from: tokenWallet});
     dateutils = await DateTime.new({from: pitai});
     const dstore = await DeviseEternalStorage.new({from: pitai});
     proxy = await DeviseRentalProxy.new(token.address, dateutils.address, dstore.address, 0, {from: pitai});
@@ -76,7 +67,6 @@ async function setupFixtures() {
     const rentalImpl = await DeviseRentalImpl.new({from: pitai});
 
     await proxy.upgradeTo(rentalImpl.address, {from: pitai});
-    await tokensale.setRentalProxy(proxy.address);
 
     rentalProxy = await DeviseRentalImpl.at(proxy.address);
     await rentalProxy.setEscrowWallet(escrowWallet);
@@ -91,12 +81,8 @@ async function setupFixtures() {
 function tokensaleTestAsArray(testTitle, i) {
     it(testTitle + (i + 1), function () {
         const ether_amount = 1000;
-        return tokensale.sendTransaction({
-            from: clients[i],
-            value: web3.toWei(ether_amount, "ether"),
-            gas: 1000000
-        }).then(async function (tx) {
-            const currentRate = await tokensale.getCurrentRate.call();
+        return transferTokens(token, rentalProxy, tokenWallet, clients[i], ether_amount).then(async function (tx) {
+            const currentRate = 16000;
             let gas = tx.receipt.gasUsed;
             console.log("Gas used: ", gas);
             let cost = gas * gasPrice * ethPrice / 10 ** 9;
@@ -517,11 +503,7 @@ contract("DevseRentalStatic3", () => {
 
     describe("Test the burnable feature", () => {
         it("Can burnable tokens", async () => {
-            await tokensale.sendTransaction({
-                from: pitai,
-                value: web3.toWei(5, "ether"),
-                gas: 1000000
-            });
+            await transferTokens(token, rentalProxy, tokenWallet, pitai, 5);
             const bal = (await token.balanceOf.call(pitai)).toNumber();
             assert.isAbove(bal, 0);
             await token.burn(10000, {from: pitai});
@@ -530,11 +512,7 @@ contract("DevseRentalStatic3", () => {
         });
 
         it("Cannot burn more tokens than you have", async () => {
-            await tokensale.sendTransaction({
-                from: escrowWallet,
-                value: web3.toWei(5, "microether"),
-                gas: 1000000
-            });
+            await transferTokens(token, rentalProxy, tokenWallet, escrowWallet, .000005);
             const bal = (await token.balanceOf.call(escrowWallet)).toNumber();
             assert.isAbove(bal, 0);
             await assertRevert(token.burn(100000, {from: escrowWallet}));
@@ -547,11 +525,7 @@ contract("Minimum Lease Test", () => {
 
     describe("Test minimum requirement for price per bit", () => {
         beforeEach(async () => {
-            await tokensale.sendTransaction({
-                from: clients[0],
-                value: web3.toWei(1000, "ether"),
-                gas: 1000000
-            });
+            await transferTokens(token, rentalProxy, tokenWallet, clients[0], 4000);
             const dvz_amount = 10 * millionDVZ * microDVZ;
             await token.approve(rentalProxy.address, dvz_amount, {from: clients[0]});
             await rentalProxy.provision(4 * millionDVZ * microDVZ, {from: clients[0]});
@@ -569,4 +543,130 @@ contract("Minimum Lease Test", () => {
         });
     });
 
+});
+
+contract("ETH/USD Rate Test", () => {
+    const rate_decimals = 8;
+    const rate_multiplier = 10 ** rate_decimals;
+    describe("Test ETH/USD rate related functionality", () => {
+        beforeEach(setupFixtures);
+        it("Initial rate should be zero", async () => {
+            const rate = await rentalProxy.rateETHUSD();
+            assert.equal(0, rate);
+        });
+
+        it("Can set rate by rate setter", async () => {
+            const myRate = 195.33 * rate_multiplier;
+            const rateSetter = clients[0];
+            await rentalProxy.addRateSetter(rateSetter, {from: pitai});
+            await rentalProxy.setRateETHUSD(myRate, {from: rateSetter});
+            const rate = await rentalProxy.rateETHUSD();
+            assert.equal(myRate, rate);
+        });
+
+        it("Can not set rate by non-owner", async () => {
+            const myRate = 201.56 * rate_multiplier;
+            await assertRevert(rentalProxy.setRateETHUSD(myRate, {from: clients[1]}));
+            const rate = await rentalProxy.rateETHUSD();
+            assert.equal(0, rate);
+        });
+
+        it("Can add a rate setter", async () => {
+            await rentalProxy.addRateSetter(clients[0], {from: pitai});
+            const rateSetter = await rentalProxy.rateSetter.call();
+            assert.equal(rateSetter, clients[0]);
+        });
+
+        it("Can remove a rate setter", async () => {
+            await rentalProxy.addRateSetter(clients[0], {from: pitai});
+            let rateSetter = await rentalProxy.rateSetter.call();
+            assert.equal(rateSetter, clients[0]);
+            await rentalProxy.removeRateSetter(clients[0], {from: pitai});
+            rateSetter = await rentalProxy.rateSetter.call();
+            assert.equal(rateSetter, 0x0);
+        });
+    });
+});
+
+const rate_setter = clients[0];
+const rate_decimals = 8;
+const rate_multiplier = 10 ** rate_decimals;
+
+async function setupFixturesProvision() {
+    await setupFixtures();
+    const saleAmount = 1 * 10 ** 9 * 10 ** 6;
+    await token.approve(rentalProxy.address, saleAmount, {from: tokenWallet});
+    await rentalProxy.addRateSetter(rate_setter, {from: pitai});
+    const myRate = 201.56 * rate_multiplier;
+    await rentalProxy.setRateETHUSD(myRate, {from: rate_setter});
+    const rate = await rentalProxy.rateETHUSD.call();
+    assert.equal(rate, myRate);
+    await rentalProxy.setTokenWallet(tokenWallet, {from: pitai});
+}
+
+contract("ProvisonWithEther Tests", () => {
+    beforeEach(setupFixturesProvision);
+
+    it("ProvisionOnBehalfOf should increase client allowance", async () => {
+        const client = clients[1];
+        const balTokenSale = (await token.balanceOf(tokenWallet)).toNumber();
+        await token.approve(rentalProxy.address, 1, {from: tokenWallet});
+        await rentalProxy.provisionOnBehalfOf(client, 1, {from: tokenWallet});
+        let bal = (await rentalProxy.getAllowance.call({from: client})).toNumber();
+        const balTokenSaleAfter = (await token.balanceOf(tokenWallet)).toNumber();
+        assert.equal(1, bal);
+        assert.equal(balTokenSaleAfter, balTokenSale - 1);
+
+        // Trying sending tokens from a different account to provision from
+        await token.transfer(clients[0], 1 * 16000 * 1000000, {from: tokenWallet});
+
+        // provision on behalf of client from clients[0]
+        await token.approve(rentalProxy.address, 1000, {from: clients[0]});
+        const balSender = (await token.balanceOf(clients[0])).toNumber();
+        await rentalProxy.provisionOnBehalfOf(client, 1000, {from: clients[0]});
+        bal = (await rentalProxy.getAllowance.call({from: client})).toNumber();
+        const balSenderAfter = (await token.balanceOf(clients[0])).toNumber();
+        assert.equal(1001, bal);
+        assert.equal(balSender - 1000, balSenderAfter);
+    });
+
+
+    it("ProvisionWithEther should increase client allowance", async () => {
+        const client = clients[1];
+        await rentalProxy.provisionWithEther({from: client, value: web3.toWei(1, "ether"), gas: 1000000});
+        let bal = await rentalProxy.getAllowance.call({from: client});
+        bal = bal.toNumber();
+        bal = bal / microDVZ;
+        assert.equal(bal, 2015.6);
+    });
+
+    it("ProvisionWithEther should increase tokenWallet ether balance", async () => {
+        const client = clients[1];
+        const bal_before = (await web3.eth.getBalance(tokenWallet)).toNumber();
+        await rentalProxy.provisionWithEther({from: client, value: web3.toWei(1, "ether"), gas: 1000000});
+        const bal = (await web3.eth.getBalance(tokenWallet)).toNumber();
+        assert.equal(bal_before + 10 ** 18, bal);
+    });
+
+    it("ProvisionWithEther should decrease tokenWallet DVZ balance", async () => {
+        const client = clients[1];
+        const bal_before = (await token.balanceOf.call(tokenWallet)).toNumber();
+        await rentalProxy.provisionWithEther({from: client, value: web3.toWei(1, "ether"), gas: 1000000});
+        const bal = (await token.balanceOf.call(tokenWallet)).toNumber();
+        assert.equal(bal_before, bal + 2015600000);
+    });
+
+    it("ProvisionWithEther should fail if no ether amount specified", async () => {
+        const client = clients[1];
+        await assertRevert(rentalProxy.provisionWithEther({from: client, gas: 1000000}));
+    });
+
+    it("provision with small amount of ethers should pass", async () => {
+        const client = clients[1];
+        await rentalProxy.provisionWithEther({from: client, value: web3.toWei(0.0005, "ether"), gas: 1000000});
+        let bal = await rentalProxy.getAllowance.call({from: client});
+        bal = bal.toNumber();
+        bal = bal / microDVZ;
+        assert.equal(bal, 1.0078);
+    });
 });
