@@ -59,6 +59,17 @@
     contract("Test events from the smart contracts", () => {
         beforeEach(setupFixtures);
 
+        it("Should observe a file created event", async () => {
+            const rate_setter = clients[0];
+            await rentalProxy.addRateSetter(rate_setter, {from: pitai});
+            const hash = '0x38a1e8a65521791b9d34cd62fac36ceb5349bb6c';
+            const tx = await rentalProxy.logFileCreated(hash, {from: rate_setter});
+            const eventName = "FileCreated";
+            const i = await findEvent(tx, eventName);
+            assert.equal(tx.logs[i].event, eventName);
+            assert.equal(tx.logs[i].args.contentHash, hash);
+        });
+
         it("Should observe the escrow wallet changed event", async () => {
             const tx = await rentalProxy.setEscrowWallet(escrowWallet);
             const eventName = "WalletChanged";

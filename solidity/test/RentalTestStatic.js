@@ -430,13 +430,13 @@ contract("DeviseRentalStatic", () => {
 
     it("Can set minimum price per bit", async function () {
         await rentalProxy.setMinimumPricePerBit(76);
-        const ret = (await rentalProxy.getMinimumPricePerBit.call()).toNumber();
+        const ret = (await rentalProxy.minimumPricePerBit.call()).toNumber();
         assert.equal(ret, 76);
     });
 
     it("Can set total seats", async function () {
         await rentalProxy.setTotalSeats(200);
-        const ret = (await rentalProxy.getTotalSeats.call()).toNumber();
+        const ret = (await rentalProxy.totalSeats.call()).toNumber();
         assert.equal(ret, 200);
     });
 

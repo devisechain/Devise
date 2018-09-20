@@ -104,3 +104,12 @@ class TestDeviseOwner(object):
         rate_setter.set_eth_usd_rate()
         rate = client.eth_usd_rate
         assert rate > 100
+
+    def test_log_file_created(self, owner_client, rate_setter):
+        owner_client.add_rate_setter(rate_setter.address)
+        hash = '38a1e8a65521791b9d34cd62fac36ceb5349bb6c'
+        tx = rate_setter.log_file_created(hash)
+        assert tx is True
+        with pytest.raises(AssertionError):
+            hash = '0x38a1e8a65521791b9d34cd62fac36ceb5349bb6c'
+            rate_setter.log_file_created(hash)

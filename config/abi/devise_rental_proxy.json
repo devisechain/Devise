@@ -334,18 +334,6 @@
     "inputs": [
       {
         "indexed": false,
-        "name": "status",
-        "type": "bool"
-      }
-    ],
-    "name": "PowerUserStatus",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
         "name": "msg",
         "type": "string"
       },
@@ -561,6 +549,18 @@
     "inputs": [
       {
         "indexed": false,
+        "name": "contentHash",
+        "type": "bytes20"
+      }
+    ],
+    "name": "FileCreated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
         "name": "addr",
         "type": "address"
       },
@@ -589,6 +589,20 @@
     ],
     "name": "RoleRemoved",
     "type": "event"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "contentHash",
+        "type": "bytes20"
+      }
+    ],
+    "name": "logFileCreated",
+    "outputs": [],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
   },
   {
     "constant": false,
