@@ -98,16 +98,16 @@ If needed, you can override the public node used to connect to the Ethereum netw
 How To Access The Devise Alternative Exchange
 =============================================
 
-In order to access the Devise alternative exchange, you need to i) have enough Devise tokens (DVZ) in your account, ii) submit a bid, and iii) request data from the API if your bid is successful.
+In order to access the Devise alternative exchange, you need to i) have enough Devise tokens (DVZ) in your escrow account, ii) submit a bid, and iii) request data from the API if your bid is successful.
 
 
-To fund your account with us, run:
+To fund your escrow account with us, run:
 
 .. code-block:: python
 
-    # Fund your account with qty ETH worth of DVZ tokens (10 DVZ = 1 US Dollar, conversion rate updated hourly and may not match current ETH price)
+    # Provision your escrow account with DVZ by transferring qty ETH from your Ethereum wallet to the rental Smart contract.
     qty = 1000
-    status = devise_client.fund_account(ether=qty)
+    devise_client.fund_account(amount=qty, unit='ETH', source='ETH')
 
     # Check your remaining escrow balance in DVZ tokens
     remaining = devise_client.dvz_balance_escrow

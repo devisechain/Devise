@@ -1,6 +1,6 @@
 const DeviseRentalBase = artifacts.require("./DeviseRentalProxy");
 const DeviseEternalStorage = artifacts.require("./DeviseEternalStorage");
-const DeviseRental_v1 = artifacts.require("./test/DeviseRentalImplTest");
+const DeviseRental_v1 = artifacts.require("./test/DeviseRentalImpl");
 const DeviseToken = artifacts.require("./DeviseToken");
 const DateTime = artifacts.require("./DateTime");
 const {timeTravel, evmSnapshot, evmRevert, transferTokens} = require('./test-utils');
@@ -75,7 +75,7 @@ contract("Rental Contract (Pausing tests)", function () {
     });
 
 
-    it.skip("Pausing contract stops non owner functions", async () => {
+    it("Pausing contract stops non owner functions", async () => {
         const client = clients[0];
         // non owner transactions
         await rental.provision(10000 * microDVZ, {from: client});
@@ -100,7 +100,7 @@ contract("Rental Contract (Pausing tests)", function () {
         await assertRevert(rental.withdraw(1, {from: client}));
     });
 
-    it.skip("Unpausing contract restores non owner functions", async () => {
+    it("Unpausing contract restores non owner functions", async () => {
         const client = clients[0];
         // Pause contract
         await proxy.pause({from: pitai});

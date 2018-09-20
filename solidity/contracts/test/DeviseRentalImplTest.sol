@@ -21,14 +21,6 @@ contract DeviseRentalImplTest is DeviseRentalImpl {
         return usefulnessBaseline;
     }
 
-    function getMinimumPricePerBit() public view returns (uint) {
-        return minimumPricePerBit;
-    }
-
-    function getTotalSeats() public view returns (uint8) {
-        return totalSeats;
-    }
-
     function getMaxSeatPercentage() public view returns (uint, uint) {
         return (maxSeatPercentage, maxSeatMultiple);
     }

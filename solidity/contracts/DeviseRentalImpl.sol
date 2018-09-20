@@ -49,7 +49,6 @@ contract DeviseRentalImpl is DeviseRentalStorage, RBAC {
     event Leased(bool status);
     event CurrentAllowance(uint amount);
     event BalanceChanged(string direction, uint amount);
-    event PowerUserStatus(bool status);
     event WalletChanged(string msg, address addr);
     event DataContractChanged(address addr);
     event BeneficiaryChanged(address addr, address ben);
@@ -65,7 +64,13 @@ contract DeviseRentalImpl is DeviseRentalStorage, RBAC {
     event RenterRemoved(address client);
     event BidCanceled(address client);
     event RateUpdated(uint timestamp, uint rate);
+    event FileCreated(bytes20 contentHash);
 
+    /// @notice Logs an event for each new file available for download
+    /// @param contentHash The hash of the file's content
+    function logFileCreated(bytes20 contentHash) public onlyRateSetters {
+        FileCreated(contentHash);
+    }
 
     /// @notice set ETH/USD rate
     /// @param rate The rate for ETH/USD that should be used
@@ -386,7 +391,6 @@ contract DeviseRentalImpl is DeviseRentalStorage, RBAC {
             recognizeRevenue(powerUserClubFee);
             BalanceChanged("decreased", powerUserClubFee);
         }
-        PowerUserStatus(allow.isPowerUser);
         return allow.isPowerUser;
     }
 

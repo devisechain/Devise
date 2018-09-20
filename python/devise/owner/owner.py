@@ -100,5 +100,26 @@ class DeviseOwner(BaseDeviseClient):
         assert price > 0
         self._transact(self._rental_contract.functions.setRateETHUSD(price), {"from": self.address})
 
+    @costs_gas
+    def log_file_created(self, content_hash):
+        """
+        Triggers a transaction which emits an event of type FileCreated from the rental smart contract
+        :param content_hash: The sha1 hash of the content of the file as a hex string
+        :return:
+        """
+        # Validate hash received
+        try:
+            assert len(content_hash) == 40, "Hash provided must be a valid sha1 hash"
+            hash_bytes = bytes.fromhex(content_hash)
+        except ValueError:
+            raise AssertionError("Hash provided must be a valid sha1 hash")
+
+        # Build a transaction with double the gas price estimated
+        transaction = {
+            "from": self.address,
+            "gasPrice": self.w3.eth.generateGasPrice() * 2
+        }
+        return self._transact(self._rental_contract.functions.logFileCreated(hash_bytes), transaction)
+
     def _get_eth_usd_price(self):
         return json.loads(requests.get('https://api.gdax.com/products/ETH-USD/ticker').text).get("price", None)
