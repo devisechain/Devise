@@ -16,6 +16,7 @@ import hashlib
 import os
 import tempfile
 import uuid
+from datetime import datetime
 from unittest import mock
 
 import pytest
@@ -295,6 +296,20 @@ class TestDeviseClient(object):
         finally:
             os.unlink(file_name)
 
+    @mock.patch("devise.clients.api.RentalAPI.get_signed_api_url", return_value='')
+    @mock.patch("devise.clients.api.RentalAPI._get_latest_weights_date_from_contents", return_value='20180608')
+    def test_download_weights_by_hash(self, _get_date_mock, signed_url_mock, client):
+        hash = "6e77f09a1f837d54726a9175fea227695c9c1a18"
+        file_name = client.download_weights_by_hash(hash)
+        assert os.path.exists(file_name)
+        try:
+            assert signed_url_mock.call_count == 1
+            url = signed_url_mock.call_args[0][0]
+            assert url == '/v1/devisechain/hashes/6e77f09a1f837d54726a9175fea227695c9c1a18'
+            assert file_name == 'weights_by_hash_20180608.zip'
+        finally:
+            os.unlink(file_name)
+
     @mock.patch("devise.clients.api.RentalAPI._download")
     def test_download_historical_weights(self, download_mock, client):
         client.download_historical_weights()
@@ -463,3 +478,45 @@ class TestDeviseClient(object):
             'last_term_paid': None,
             'power_user': True
         }
+
+    def test_get_sha1_for_file(self, client):
+        file_path = os.path.join(os.path.dirname(__file__), "hash_test.json")
+        sha1 = client.get_hash_for_file(file_path)
+        assert sha1 == 'edd22313d5aec9041b405953bfb10168b1d58b2e'
+
+    def test_get_all_events(self, client, owner_client, rate_setter):
+        owner_client.add_rate_setter(rate_setter.address)
+        block_number = rate_setter.w3.eth.getBlock('latest')['number']
+        rate_setter.log_file_created(hashlib.sha1('Hello World'.encode('utf-8')).hexdigest())
+        events = client.get_events('FileCreated')
+        assert events == [{
+            'event': 'FileCreated',
+            'event_args': {'contentHash': '0a4d55a8d778e5022fab701977c5d840bbc486d0'},
+            'block_number': block_number + 1,
+            'block_timestamp': rate_setter.w3.eth.getBlock(block_number + 1)['timestamp'],
+            'block_datetime': datetime.utcfromtimestamp(rate_setter.w3.eth.getBlock(block_number + 1)['timestamp']),
+            'transaction': events[0]['transaction']
+        }]
+
+        client.designate_beneficiary('0x73fCe79Bb6341e82E45cF58AAB680F6Af7019342')
+        events = client.get_events('BeneficiaryChanged')
+        assert events == [{
+            'event': 'BeneficiaryChanged',
+            'event_args': {
+                'client_address': client.address,
+                'beneficiary_address': '0x73fCe79Bb6341e82E45cF58AAB680F6Af7019342'
+            },
+            'block_number': block_number + 2,
+            'block_timestamp': rate_setter.w3.eth.getBlock(block_number + 2)['timestamp'],
+            'block_datetime': datetime.utcfromtimestamp(rate_setter.w3.eth.getBlock(block_number + 2)['timestamp']),
+            'transaction': events[0]['transaction']
+        }]
+
+    def test_event_names(self, client):
+        events = client.event_names
+        assert len(events) >= 20
+        assert 'AuctionPriceSet' in events
+        assert 'FileCreated' in events
+        assert 'LeptonAdded' in events
+        assert 'BeneficiaryChanged' in events
+

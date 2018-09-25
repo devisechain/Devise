@@ -75,6 +75,25 @@ def get_default_node_url(network=None):
     return node_url
 
 
+def get_rental_contract_addresses(network_id="1"):
+    """
+    Get a list of all the rental proxy addresses we've ever deployed for audit purposes
+    """
+    contract_addresses = CONTRACT_ADDRESSES.get(network_id, {}).get('DEVISE_RENTAL_PREVIOUS_ADDRESSES', [])
+    contract_addresses += [CONTRACT_ADDRESSES.get(network_id, {}).get('DEVISE_RENTAL')]
+
+    return contract_addresses
+
+
+def get_events_node_url(network_id="1"):
+    """
+    Get any custom node required to query events from the block chain (for example Infura has issues querying too far
+     in the past)
+    """
+    events_nodes = resp_json.get('EVENT_QUERY_NODES', {})
+    return events_nodes.get(network_id)
+
+
 def _create_account(passwd):
     acct = Account().create()
     priKey = acct.privateKey
@@ -139,7 +158,7 @@ class BaseEthereumClient(object):
         # Connect to node url
         if node_url is None:
             node_url = get_default_node_url()
-        provider = HTTPProvider(node_url)
+        provider = self._get_provider(node_url)
         self.w3 = Web3(provider)
         self._network_id = self._get_network_id()
 
@@ -314,8 +333,16 @@ class BaseEthereumClient(object):
 
         private_key = self._private_key
         if self._key_file:
-            password = self._password or getpass("Password to decrypt keystore file %s: " % self.account)
-            private_key = self._get_private_key(self._key_file, password)
+            password = self._password if self._password is not None else ""
+            # Try decoding the key file, prompting user for password if needed
+            while not private_key:
+                try:
+                    private_key = self._get_private_key(self._key_file, password)
+                except ValueError:
+                    if self._password is not None:
+                        raise ValueError('Invalid password specified for key file %s' % self._key_file)
+                    # If no password was specified, we're running interactively, prompt for password
+                    password = getpass("Password to decrypt keystore file %s: " % self.account)
 
         # Build a transaction to sign
         gas_buffer = 100000
@@ -376,6 +403,15 @@ class BaseEthereumClient(object):
             "from": self.address,
             "to": Web3.toChecksumAddress(to_address),
             "value": wei_value})
+
+    def _get_provider(self, node_url):
+        """Given a node url, returns the right Web3 provider"""
+        if node_url[:4] in ['wss:', 'ws:/']:
+            provider = Web3.WebsocketProvider(node_url)
+        else:
+            provider = HTTPProvider(node_url)
+
+        return provider
 
 
 class BaseDeviseClient(BaseEthereumClient):

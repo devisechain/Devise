@@ -9,6 +9,7 @@
     :license: GPLv3, see LICENSE for more details.
 """
 import csv
+import hashlib
 import io
 import os
 import uuid
@@ -22,6 +23,14 @@ from eth_account.messages import defunct_hash_message
 
 import devise
 from devise.base import BaseDeviseClient
+
+
+def read_in_chunks(file_object, chunk_size=1024):
+    while True:
+        data = file_object.read(chunk_size)
+        if not data:
+            break
+        yield data
 
 
 class RentalAPI(BaseDeviseClient):
@@ -99,6 +108,52 @@ class RentalAPI(BaseDeviseClient):
         file_name = 'devise_latest_weights_{content_date}.zip'.format(content_date=content_date)
         os.rename(unique_filename, file_name)
         return file_name
+
+    def download_weights_by_hash(self, hash):
+        """
+        Download a weights file the content hash of which matches the hash
+        :param hash: the hash used to retrieve a weights file
+        :return: the file name with the content date as suffix
+        """
+        unique_filename = self.download_file_by_hash(hash)
+        content_date = self._get_latest_weights_date_from_contents(unique_filename)
+        file_name = 'weights_by_hash_{content_date}.zip'.format(content_date=content_date)
+        os.rename(unique_filename, file_name)
+        return file_name
+
+    def download_file_by_hash(self, hash):
+        """
+        Download a file the content hash of which matches the hash
+        :param hash: the hash used to retrieve a file
+        :return: the temp file name
+        """
+        api_url = self._api_root + self.get_signed_api_url('/v1/devisechain/hashes/' + hash)
+        self.logger.info("Downloading %s", api_url)
+        unique_filename = uuid.uuid4().hex
+        self._download(api_url, unique_filename)
+        return unique_filename
+
+    def _get_sha1_for_file(self, file_name):
+        """
+        Calculate the sha1 for a file
+        :param file_name: The path of file to be hashed
+        :return: the SHA1 hash of the content of file
+        """
+        sha1 = hashlib.sha1()
+        f = open(file_name, 'rb')
+        for piece in read_in_chunks(f):
+            sha1.update(piece)
+        sha1_hash = sha1.hexdigest()
+        f.close()
+        return sha1_hash
+
+    def get_hash_for_file(self, file_name):
+        """
+        Calculate the hash for a file
+        :param file_name: The path of file to be hashed
+        :return: the SHA1 hash of the content of file
+        """
+        return self._get_sha1_for_file(file_name)
 
     def download_historical_weights(self):
         """Downloads a historical archive with all the weights calculated for each lepton in the blockchain
