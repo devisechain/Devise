@@ -8,9 +8,12 @@
     :copyright: © 2018 Pit.AI
     :license: GPLv3, see LICENSE for more details.
 """
+from datetime import datetime
+
 from web3 import Web3
 
-from devise.base import costs_gas, generate_account, BaseDeviseClient
+from devise.base import costs_gas, generate_account, BaseDeviseClient, get_contract_abi, get_rental_contract_addresses, \
+    get_events_node_url
 from .token import TOKEN_PRECISION
 
 IU_PRECISION = 1e6
@@ -398,3 +401,101 @@ class RentalContract(BaseDeviseClient):
         addr = acct[1]
         ret = self.designate_beneficiary(acct[1])
         return ret, addr
+
+    @property
+    def event_names(self):
+        return sorted(event['name'] for event in self._rental_contract.events._events)
+
+    def get_events(self, event_name):
+        """
+        Returns all events of a type from the rental smart contract
+        :param event_name: The event for which we want all entries from the blockchain
+        :return: a list of dict containing transaction, block_number, block_timestamp, event, and event_args
+        """
+
+        network_id = self._get_network_id()
+        w3 = self.w3
+        # Load different provider for querying events if any
+        node_url = get_events_node_url(network_id=network_id)
+        current_provider = self.w3.providers[0]
+        if node_url and current_provider.endpoint_uri != node_url:
+            w3 = Web3(self._get_provider(node_url))
+
+        # Filter from a recent block preceding any deployment to avoid timing out
+        from_block = 5934817 if int(network_id) == 1 else 0
+        events = []
+
+        # Get the contract abi so we can build our topic filter
+        rental_abi = get_contract_abi('DeviseRentalImpl')
+
+        # get all previous rental contract addresses in case of forks
+        rental_contracts = get_rental_contract_addresses(network_id=network_id)
+        for contract_address in rental_contracts:
+            contract = w3.eth.contract(address=contract_address, abi=rental_abi)
+            event_filter = contract.eventFilter(event_name, {'fromBlock': from_block, 'toBlock': 'latest'})
+            events += event_filter.get_all_entries()
+
+        # Format events for humans
+        results = []
+        for event in events:
+            block_timestamp = self.get_block_timestamp(event["blockNumber"])
+            block_datetime = datetime.utcfromtimestamp(block_timestamp)
+            results += [{
+                "transaction": event["transactionHash"].hex(),
+                "block_number": event["blockNumber"],
+                "block_timestamp": self.get_block_timestamp(event["blockNumber"]),
+                "block_datetime": block_datetime,
+                "event": event["event"],
+                "event_args": self._format_event_args(event_name, event['args'])
+            }]
+        return results
+
+    def _format_event_args(self, event_name, args):
+        """Given a dictionary of arguments from events, formats them to humanly readable keys and values"""
+        formatted_args = {}
+        for key, value in args.items():
+            formatted_key = self._format_event_arg_key(event_name, key)
+            formatted_args[formatted_key] = self._format_event_arg_value(event_name, key, value)
+
+        return formatted_args
+
+    def _format_event_arg_key(self, event_name, key):
+        """Applies custom formatters if any for particular event keys"""
+        key_formatters = {
+            'LeptonAdded': {
+                's': 'lepton_hash',
+                'iu': 'incremental_usefulness'
+            },
+            'BeneficiaryChanged': {
+                'addr': 'client_address',
+                'ben': 'beneficiary_address'
+            },
+            'AuctionPriceSet': {
+                'prc': 'price_per_bit'
+            }
+        }
+        converted_key = key_formatters.get(event_name, {}).get(key, None)
+        return converted_key if converted_key else key
+
+    def _format_event_arg_value(self, event_name, key, value):
+        """Applies custom formatters if any for particular event values"""
+        value_formatters = {
+            'RateUpdated': {
+                'rate': lambda rate: "$ %f" % (rate / USD_PRECISION),
+            },
+            'LeptonAdded': {
+                'iu': lambda iu: iu / IU_PRECISION
+            },
+            'AuctionPriceSet': {
+                'prc': lambda price: price / TOKEN_PRECISION
+            }
+        }
+        formatter = value_formatters.get(event_name, {}).get(key, None)
+        if formatter:
+            return formatter(value)
+        if type(value) == bytes:
+            return value.hex()
+        return value
+
+    def get_block_timestamp(self, block_number):
+        return self.w3.eth.getBlock(block_number)['timestamp']
