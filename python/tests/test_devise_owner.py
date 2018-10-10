@@ -88,16 +88,29 @@ class TestDeviseOwner(object):
         rate_setter = owner_client.get_rate_setter()
         assert rate_setter == '0x0000000000000000000000000000000000000000'
 
+    def test_get_audit_updater(self, owner_client):
+        weights_updater = owner_client.get_audit_updater()
+        assert weights_updater == '0x0000000000000000000000000000000000000000'
+
     def test_add_rate_setter(self, owner_client, client):
         rate_setter = client.address
         ret = owner_client.add_rate_setter(rate_setter)
-        assert ret == True
+        assert ret
 
     def test_remove_rate_setter(self, owner_client, client):
         owner_client.add_rate_setter(client.address)
         owner_client.remove_rate_setter(client.address)
-        with pytest.raises(Exception):
-            owner_client.get_rate_setter(0)
+        assert owner_client.get_rate_setter() == '0x0000000000000000000000000000000000000000'
+
+    def test_add_audit_updater(self, owner_client, client):
+        weights_updater = client.address
+        ret = owner_client.add_audit_updater(weights_updater)
+        assert ret
+
+    def test_remove_audit_updater(self, owner_client, client):
+        owner_client.add_audit_updater(client.address)
+        owner_client.remove_audit_updater(client.address)
+        assert owner_client.get_audit_updater() == '0x0000000000000000000000000000000000000000'
 
     def test_set_eth_usd_rate(self, owner_client, rate_setter, client):
         owner_client.add_rate_setter(rate_setter.address)
@@ -105,11 +118,11 @@ class TestDeviseOwner(object):
         rate = client.eth_usd_rate
         assert rate > 100
 
-    def test_log_file_created(self, owner_client, rate_setter):
-        owner_client.add_rate_setter(rate_setter.address)
+    def test_latest_weights_updated(self, owner_client, weights_updater):
+        owner_client.add_audit_updater(weights_updater.address)
         hash = '38a1e8a65521791b9d34cd62fac36ceb5349bb6c'
-        tx = rate_setter.log_file_created(hash)
+        tx = weights_updater.latest_weights_updated(hash)
         assert tx is True
         with pytest.raises(AssertionError):
             hash = '0x38a1e8a65521791b9d34cd62fac36ceb5349bb6c'
-            rate_setter.log_file_created(hash)
+            weights_updater.latest_weights_updated(hash)

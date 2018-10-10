@@ -1,68 +1,39 @@
-const DeviseRentalBase = artifacts.require("./DeviseRentalProxy");
-const DeviseEternalStorage = artifacts.require("./DeviseEternalStorage");
-const DeviseRental_v1 = artifacts.require("./test/DeviseRentalImplTest");
-const DeviseToken = artifacts.require("./DeviseToken");
-const DateTime = artifacts.require("./DateTime");
 const moment = require('moment');
-const {timeTravel, evmSnapshot, evmRevert, timestampToDate, assertContractState, transferTokens} = require('./test-utils');
+const setupFixturesHelper = require('./helpers/setupFixtures');
+const {timeTravel, evmSnapshot, evmRevert, timestampToDate} = require('./test-utils');
 const leptons = require('./leptons');
 const assertRevert = require('./helpers/assertRevert');
+const DeviseRentalBase = artifacts.require("./DeviseRentalProxy");
 
 const pitai = web3.eth.accounts[0];
-const escrowWallet = web3.eth.accounts[1];
-const revenueWallet = web3.eth.accounts[2];
-const clients = web3.eth.accounts.slice(3);
+const clients = web3.eth.accounts.slice(4);
 let token;
-let tokenWallet;
-let rental;
 let proxy;
+let rental;
+let auctionProxy;
 let initialStateSnapshotId = 0;
 let testSnapshotId = 0;
-let estor;
+let eternalStorage;
+let auctionStorage;
+let accessControlProxy;
 let microDVZ = 10 ** 6;
 let millionDVZ = 10 ** 6;
 
 async function setupFixtures() {
     initialStateSnapshotId = (await evmSnapshot()).result;
-    // Setup all the contracts
-    const cap = 10 * 10 ** 9 * 10 ** 6;
-    token = await DeviseToken.new(cap, {from: pitai});
-    tokenWallet = pitai;
-    // mint 1 billion tokens for token sale
-    const saleAmount = 1 * 10 ** 9 * 10 ** 6;
-    await token.mint(tokenWallet, saleAmount);
-    dateTime = await DateTime.deployed();
-    estor = await DeviseEternalStorage.new();
-    // Create new upgradeable contract frontend (proxy)
-    proxy = await DeviseRentalBase.new(token.address, dateTime.address, estor.address, 0, {from: pitai});
-    // Set it's implementation version
-    await proxy.upgradeTo((await DeviseRental_v1.new()).address);
-    // Use implementation functions with proxy address
-    rental = DeviseRental_v1.at(proxy.address);
-    rental._token = token;
-    rental.assertContractState = assertContractState;
-    await rental.setEscrowWallet(escrowWallet);
-    await rental.setRevenueWallet(revenueWallet);
-    await rental.addMasterNode(pitai);
-    const escrow_cap = 1000000000000000000 * microDVZ;
-    await token.approve(rental.address, escrow_cap, {from: escrowWallet});
+    const tokenWallet = web3.eth.accounts[1];
+    const escrowWallet = web3.eth.accounts[2];
+    const revenueWallet = web3.eth.accounts[3];
 
-    // test addLepton can't be called prior to authorize
-    await assertRevert(rental.addLepton(leptons[0], '', 1000000 * (3)));
-    await estor.authorize(proxy.address);
-    // Pit.AI adds leptons to rental contract
-    await rental.addLepton(leptons[0], '', 1000000 * (3));
-    await rental.addLepton(leptons[1], leptons[0], 1000000 * (3));
-    await rental.addLepton(leptons[2], leptons[1], 1000000 * (2));
-    await rental.addLepton(leptons[3], leptons[2], 1000000 * (2));
-    await rental.addLepton(leptons[4], leptons[3], 1000000 * (1));
-    await rental.addLepton(leptons[5], leptons[4], 1000000 * (1));
-    // Some clients buy tokens and approve transfer to rental contract
-    const ether_amount = 5000;
-    await Promise.all(clients.slice(0, 11).map(async client => await transferTokens(token, rental, tokenWallet, client, ether_amount)));
-    await Promise.all(clients.slice(0, 11).map(async client => await token.approve(rental.address, 100 * millionDVZ * microDVZ, {from: client})));
-    // move forward 1 month
-    await timeTravel(86400 * 31);
+    ({
+        proxy,
+        rental,
+        token,
+        auctionProxy,
+        auctionStorage,
+        eternalStorage,
+        accessControlProxy
+    } = await setupFixturesHelper(pitai, escrowWallet, tokenWallet, revenueWallet, clients, true, true));
     // snapshot the blockchain
     testSnapshotId = (await evmSnapshot()).result;
 }
@@ -116,17 +87,17 @@ contract("UpdateLeaseTerms", function () {
             expectedNextTermRent: rent
         });
 
-        // test leaseAll can't be called if unauthorized
-        await estor.unauthorize(proxy.address);
-        await assertRevert(rental.leaseAll(10000 * microDVZ, 10, {from: client}));
-        await estor.authorize(proxy.address);
+        // test leaseAll can't be called if accessControlProxy unauthorized
+        await auctionStorage.unauthorize(accessControlProxy.address);
+        await assertRevert(rental.leaseAll(1000 * microDVZ, 10, {from: client}));
+        await auctionStorage.authorize(accessControlProxy.address);
 
         // lease 10 seats
-        await rental.leaseAll(10000 * microDVZ, 10, {from: client});
-        await rental.leaseAll(10000 * microDVZ, 10, {from: client});
-        await rental.leaseAll(10000 * microDVZ, 10, {from: client});
+        await rental.leaseAll(1000 * microDVZ, 10, {from: client});
+        await rental.leaseAll(1000 * microDVZ, 10, {from: client});
+        await rental.leaseAll(1000 * microDVZ, 10, {from: client});
         const dues = await getProratedDues(10);
-        const clientInfo2 = await rental.getClientSummary(client);
+        const clientInfo2 = await rental.getClientSummary.call(client);
         assert.equal(clientInfo2[0], client);
         assert.equal(clientInfo2[1].toNumber(), client_provision - dues); // escrow balance
         assert.equal(clientInfo2[2].toNumber(), tokenBalance);
@@ -139,7 +110,7 @@ contract("UpdateLeaseTerms", function () {
             expectedRevenue: dues,
             expectedClients: [client],
             expectedRenters: [client],
-            expectedBids: [[client], [10], [10000 * microDVZ]],
+            expectedBids: [[client], [10], [1000 * microDVZ]],
             expectedRent: rent,
             expectedNextTermRent: rent
         });
@@ -159,7 +130,7 @@ contract("UpdateLeaseTerms", function () {
             expectedRevenue: dues,
             expectedClients: [client],
             expectedRenters: [client],
-            expectedBids: [[client], [10], [10000 * microDVZ]],
+            expectedBids: [[client], [10], [1000 * microDVZ]],
             expectedRent: rent,
             expectedNextTermRent: rent
         });
@@ -202,7 +173,6 @@ contract("UpdateLeaseTerms", function () {
         const client = clients[0];
         assert.equal(await rental.getAllowance.call({from: client}), 0);
         // client provisions balance in rental contract and leases
-        const iu = (await rental.getTotalIncrementalUsefulness()).toNumber();
         const rent = (await rental.getRentPerSeatCurrentTerm()).toNumber();
         const dues = await getProratedDues(10);
         const client_provision = 1000000 * microDVZ;
@@ -242,6 +212,7 @@ contract("UpdateLeaseTerms", function () {
         // we should only have gotten charged for the 1 term
         const currentBalance = (await rental.getAllowance.call({from: client})).toNumber();
         assert.equal(currentBalance, client_provision + more_provision - dues);
+        const numRenters = (await rental.getNumberOfRenters.call()).toNumber();
         await rental.assertContractState({
             expectedEscrow: client_provision + more_provision - dues,
             expectedRevenue: dues,
@@ -259,7 +230,7 @@ contract("UpdateLeaseTerms", function () {
         assert.equal(initialAllowance, 0);
 
         // client provisions balance in rental contract and calls leaseAll
-        const client_provision = 30 * millionDVZ * microDVZ;
+        const client_provision = 50 * millionDVZ * microDVZ;
         const bal = (await token.balanceOf.call(client)).toNumber();
         assert.isAbove(bal, client_provision);
         await rental.provision(client_provision, {from: client});
@@ -313,7 +284,7 @@ contract("UpdateLeaseTerms", function () {
         }
         // check that we would collect the right amounts after 7 months
         const price = (await rental.getRentPerSeatCurrentTerm.call()).toNumber() * 10;
-        await rental.updateLeaseTerms();
+        await rental.updateGlobalState();
         await rental.assertContractState({
             expectedEscrow: client_provision - (dues + Math.floor(price)),
             expectedRevenue: dues + Math.floor(price),
@@ -488,7 +459,7 @@ contract("UpdateLeaseTerms", function () {
             assert.equal(client1BalanceMonth2, client2BalanceMonth2);
         }
         // after 6 months, collect rent and check that we collected it right
-        await rental.updateLeaseTerms();
+        await rental.updateGlobalState();
         let duesNewIu = (usefulness + 1) * client_bid * 10;
         const currentLeaseTerm = (await rental.getCurrentLeaseTerm()).toNumber();
         const totalDues = (dues * 2) + (duesNewIu * 2 * (currentLeaseTerm - initialCurrentLeaseTerm));
@@ -503,7 +474,7 @@ contract("UpdateLeaseTerms", function () {
         });
     });
 
-    it("updateLeaseTerms removes clients who run out of tokens", async () => {
+    it("updateGlobalState removes clients who run out of tokens", async () => {
         const provision_amount = 10 * millionDVZ * microDVZ;
         const client_bid = 10000 * microDVZ;
         // First 5 clients get 10 seats each
@@ -559,7 +530,7 @@ contract("UpdateLeaseTerms", function () {
         const finalAvailableSeats = (await rental.getSeatsAvailable.call()).toNumber();
         assert.equal(finalAvailableSeats, numSeats);
         // assert that we collected the right rent after all the terms
-        await rental.updateLeaseTerms();
+        await rental.updateGlobalState();
         const rent = (await rental.getRentPerSeatCurrentTerm.call()).toNumber();
         await rental.assertContractState({
             expectedEscrow: dues2 + (provision_amount * 5) - (dues * 5) - dues2 - (rent * 50),
@@ -601,7 +572,7 @@ contract("UpdateLeaseTerms", function () {
         // client checks his own balance in a free call()
         const allowanceBeforeUpdate = (await rental.getAllowance.call({from: client})).toNumber();
         // We make a transaction to update the contract's internal state
-        await rental.updateLeaseTerms();
+        await rental.updateGlobalState();
         // client checks his own balance in a free call()
         const allowanceAfterUpdate = (await rental.getAllowance.call({from: client})).toNumber();
         assert.equal(allowanceBeforeUpdate, allowanceAfterUpdate);
@@ -796,16 +767,16 @@ contract("UpdateLeaseTerms", function () {
         }
     });
 
-    it("Can get data contract", async function () {
+    it.skip("Can get data contract", async function () {
         const dataConract = await rental.getDataContract.call();
-        assert.equal(dataConract, estor.address);
+        assert.equal(dataConract, eternalStorage.address);
     });
 
-    it("Can set new data contract", async function () {
-        estor = await DeviseEternalStorage.new();
-        await rental.setDataContract(estor.address);
+    it.skip("Can set new data contract", async function () {
+        eternalStorage = await DeviseEternalStorage.new();
+        await rental.setDataContract(eternalStorage.address);
         const dataConract = await rental.getDataContract.call();
-        assert.equal(dataConract, estor.address);
+        assert.equal(dataConract, eternalStorage.address);
     });
 
     it("Can get the current number of seats leased", async function () {
@@ -836,7 +807,7 @@ contract("UpdateLeaseTerms", function () {
     it("Can return the current lease term index", async function () {
         // compare the up to date least term getter with the public variable value
         const leaseTerm = (await rental.getCurrentLeaseTerm()).toNumber();
-        await rental.updateLeaseTerms();
+        await rental.updateGlobalState();
         const publicLeaseTerm = (await rental.leaseTerm()).toNumber();
         const idx = moment([2018, 1, 1]).diff(moment(new Date()), 'months', true);
         assert.isAbove(leaseTerm, idx);
@@ -925,7 +896,7 @@ contract("UpdateLeaseTerms", function () {
         assert.equal(escrowBalance1, 20);
 
         // call updateLeastTerms manually and make sure we have not collected any additional revenue
-        await rental.updateLeaseTerms();
+        await rental.updateGlobalState();
         await rental.assertContractState({
             expectedEscrow: 10 + 20,
             expectedRevenue: initialRevenueBalance + (2 * rent),

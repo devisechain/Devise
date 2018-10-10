@@ -1,10 +1,6 @@
-const DeviseRentalBase = artifacts.require("./DeviseRentalProxy");
-const DeviseEternalStorage = artifacts.require("./DeviseEternalStorage");
+const setupFixturesHelper = require('./helpers/setupFixtures');
 const DeviseRental_v1 = artifacts.require("./test/DeviseRentalImpl");
-const DeviseToken = artifacts.require("./DeviseToken");
-const DateTime = artifacts.require("./DateTime");
-const {timeTravel, evmSnapshot, evmRevert, transferTokens} = require('./test-utils');
-const leptons = require('./leptons');
+const {timeTravel, evmSnapshot, evmRevert} = require('./test-utils');
 const assertRevert = require('./helpers/assertRevert');
 
 const pitai = web3.eth.accounts[0];
@@ -16,50 +12,17 @@ let token;
 let rental;
 let proxy;
 let testSnapshotId = 0;
-let estor;
+let eternalStorage;
 let microDVZ = 10 ** 6;
 let millionDVZ = 10 ** 6;
 
 async function setupFixtures() {
-    // Setup all the contracts
-    const cap = 10 * 10 ** 9 * 10 ** 6;
-    token = await DeviseToken.new(cap, {from: pitai});
-
-    // mint 1 billion tokens for token sale
-    const saleAmount = 1 * 10 ** 9 * 10 ** 6;
-    await token.mint(tokenWallet, saleAmount);
-    dateTime = await DateTime.deployed();
-    estor = await DeviseEternalStorage.new();
-    // Create new upgradeable contract frontend (proxy)
-    proxy = await DeviseRentalBase.new(token.address, dateTime.address, estor.address, 0, {from: pitai});
-    // Set it's implementation version
-    await proxy.upgradeTo((await DeviseRental_v1.new()).address);
-    // Use implementation functions with proxy address
-    rental = DeviseRental_v1.at(proxy.address);
-    await rental.setEscrowWallet(escrowWallet);
-    await rental.setRevenueWallet(revenueWallet);
-    await rental.addMasterNode(pitai);
-
-
-    const escrow_cap = 1000000000000000000 * microDVZ;
-    await token.approve(rental.address, escrow_cap, {from: escrowWallet});
-
-    // test addLepton can't be called prior to authorize
-    await assertRevert(rental.addLepton(leptons[0], '', 1000000 * (3)));
-    await estor.authorize(proxy.address);
-    // Pit.AI adds leptons to rental contract
-    await rental.addLepton(leptons[0], '', 1000000 * (3));
-    await rental.addLepton(leptons[1], leptons[0], 1000000 * (3));
-    await rental.addLepton(leptons[2], leptons[1], 1000000 * (2));
-    await rental.addLepton(leptons[3], leptons[2], 1000000 * (2));
-    await rental.addLepton(leptons[4], leptons[3], 1000000 * (1));
-    await rental.addLepton(leptons[5], leptons[4], 1000000 * (1));
-    // Some clients buy tokens and approve transfer to rental contract
-    const ether_amount = 3000;
-    await Promise.all(clients.map(async client => await transferTokens(token, rental, tokenWallet, client, ether_amount)));
-    await Promise.all(clients.map(async client => await token.approve(rental.address, 30 * millionDVZ * microDVZ, {from: client})));
-    // move forward 1 month
-    await timeTravel(86400 * 31);
+    ({
+        rental,
+        proxy,
+        token,
+        eternalStorage
+    } = await setupFixturesHelper(pitai, escrowWallet, tokenWallet, revenueWallet, clients, true, true));
     // snapshot the blockchain
     testSnapshotId = (await evmSnapshot()).result;
 }
@@ -78,7 +41,7 @@ contract("Rental Contract (Pausing tests)", function () {
     it("Pausing contract stops non owner functions", async () => {
         const client = clients[0];
         // non owner transactions
-        await rental.provision(10000 * microDVZ, {from: client});
+        await rental.provision(12000 * microDVZ, {from: client});
         await rental.applyForPowerUser({from: client});
         await rental.requestHistoricalData({from: client});
         await rental.designateBeneficiary(client, {from: client});
@@ -89,7 +52,7 @@ contract("Rental Contract (Pausing tests)", function () {
         // owner operations still work
         await rental.setHistoricalDataFee(0, {from: pitai});
         await rental.setPowerUserClubFee(0, {from: pitai});
-        await rental.setDataContract(estor.address, {from: pitai});
+        // await rental.setDataContract(eternalStorage.address, {from: pitai});
         await proxy.upgradeTo((await DeviseRental_v1.new()).address);
         // client operations are paused
         await assertRevert(rental.provision(10000 * microDVZ, {from: client}));
@@ -109,10 +72,10 @@ contract("Rental Contract (Pausing tests)", function () {
         // owner operations still work
         await rental.setHistoricalDataFee(0, {from: pitai});
         await rental.setPowerUserClubFee(0, {from: pitai});
-        await rental.setDataContract(estor.address, {from: pitai});
+        // await rental.setDataContract(eternalStorage.address, {from: pitai});
         await proxy.upgradeTo((await DeviseRental_v1.new()).address, {from: pitai});
         // client operations are ok
-        await rental.provision(10000 * microDVZ, {from: client});
+        await rental.provision(12000 * microDVZ, {from: client});
         await rental.applyForPowerUser({from: client});
         await rental.requestHistoricalData({from: client});
         await rental.designateBeneficiary(client, {from: client});

@@ -2,34 +2,6 @@
   {
     "constant": true,
     "inputs": [],
-    "name": "totalSeats",
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint8"
-      }
-    ],
-    "payable": false,
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [],
-    "name": "minimumPricePerBit",
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "payable": false,
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [],
     "name": "revenueWallet",
     "outputs": [
       {
@@ -84,64 +56,10 @@
     "type": "function"
   },
   {
-    "constant": true,
-    "inputs": [],
-    "name": "seatsAvailable",
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint8"
-      }
-    ],
-    "payable": false,
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [],
-    "name": "leaseTerm",
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "payable": false,
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [],
-    "name": "totalIncrementalUsefulness",
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "payable": false,
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
     "inputs": [
       {
         "name": "_token",
         "type": "address"
-      },
-      {
-        "name": "_dateUtils",
-        "type": "address"
-      },
-      {
-        "name": "_permData",
-        "type": "address"
-      },
-      {
-        "name": "_totalIncrementalUsefulness",
-        "type": "uint256"
       }
     ],
     "payable": false,

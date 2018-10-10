@@ -243,7 +243,8 @@ class RentalContract(BaseDeviseClient):
         self.logger.info("Approving token transfer to rental contract...")
         micro_tokens = int(tokens * TOKEN_PRECISION)
         # Approve tokens transfer into the clients contract
-        self._transact(self._token_contract.functions.approve(self._rental_contract.address, micro_tokens),
+        accounting_contract = self._rental_contract.functions.accounting().call()
+        self._transact(self._token_contract.functions.approve(accounting_contract, micro_tokens),
                        {"from": self.address})
 
         self.logger.info("Provisioning rental contract with %s DVZ tokens..." % tokens)
@@ -259,7 +260,8 @@ class RentalContract(BaseDeviseClient):
         self.logger.info("Approving token transfer to rental contract...")
         micro_tokens = int(tokens * TOKEN_PRECISION)
         # Approve tokens transfer into the clients contract
-        self._transact(self._token_contract.functions.approve(self._rental_contract.address, micro_tokens),
+        accounting_contract = self._rental_contract.functions.accounting().call()
+        self._transact(self._token_contract.functions.approve(accounting_contract, micro_tokens),
                        {"from": self.address})
 
         self.logger.info("Provisioning escrow account %s with %s DVZ tokens..." % (recipient, tokens))
@@ -432,8 +434,22 @@ class RentalContract(BaseDeviseClient):
         rental_contracts = get_rental_contract_addresses(network_id=network_id)
         for contract_address in rental_contracts:
             contract = w3.eth.contract(address=contract_address, abi=rental_abi)
+            try:
+                event_filter = contract.eventFilter(event_name, {'fromBlock': from_block, 'toBlock': 'latest'})
+                events += event_filter.get_all_entries()
+            except ValueError:
+                # event is not declared in this contract, skip
+                pass
+
+        # Also add matching event from standalone audit contract
+        audit_abi = get_contract_abi('AuditImpl')
+        contract = w3.eth.contract(address=self._audit_contract.address, abi=audit_abi)
+        try:
             event_filter = contract.eventFilter(event_name, {'fromBlock': from_block, 'toBlock': 'latest'})
             events += event_filter.get_all_entries()
+        except ValueError:
+            # event is not declared in this contract, skip
+            pass
 
         # Format events for humans
         results = []

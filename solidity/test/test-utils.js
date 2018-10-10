@@ -85,7 +85,8 @@ const assertClientBidsRespected = async function () {
         // indicative price per bit less than or equal bid limit price if next seats > 0
         assert(nextTermSeats === 0 || bidLimitPrice >= price, "Next term seats when limit price too low? ");
         // assert the renter paid for the current term
-        assert(currentTermSeats === 0 || summary[3].toNumber() === (await this.getCurrentLeaseTerm.call()).toNumber());
+        const currentTerm = (await this.getCurrentLeaseTerm.call()).toNumber();
+        assert(currentTermSeats === 0 || summary[3].toNumber() === currentTerm, "Renter did not pay for current term: " + currentTerm);
         // if client has seats in the next term, assert he/she can pay for them
         if (nextTermSeats) {
             const nextRent = (await this.getIndicativeRentPerSeatNextTerm.call()).toNumber();

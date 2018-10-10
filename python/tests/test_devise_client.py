@@ -186,10 +186,10 @@ class TestDeviseClient(object):
         client.apply_for_power_user()
         assert client.is_power_user
 
-    def total_incremental_usefulness(self, client, master_node):
+    def test_total_incremental_usefulness(self, client, master_node):
         assert client.total_incremental_usefulness == 0
         lepton_hash = hashlib.sha1('hello world 1'.encode('utf8')).hexdigest()
-        master_node.add_lepton(lepton_hash, 1.5123456789123456789)
+        master_node.add_lepton(lepton_hash, None, 1.5123456789123456789)
         assert client.total_incremental_usefulness == 1.512345
 
     def test_get_all_leptons(self, master_node, client):
@@ -485,30 +485,20 @@ class TestDeviseClient(object):
         assert sha1 == 'edd22313d5aec9041b405953bfb10168b1d58b2e'
 
     def test_get_all_events(self, client, owner_client, rate_setter):
-        owner_client.add_rate_setter(rate_setter.address)
+        owner_client.add_audit_updater(rate_setter.address)
+        rate_setter.latest_weights_updated('edd22313d5aec9041b405953bfb10168b1d58b2e')
         block_number = rate_setter.w3.eth.getBlock('latest')['number']
-        rate_setter.log_file_created(hashlib.sha1('Hello World'.encode('utf-8')).hexdigest())
-        events = client.get_events('FileCreated')
+        events = client.get_events('AuditableEventCreated')
         assert events == [{
-            'event': 'FileCreated',
-            'event_args': {'contentHash': '0a4d55a8d778e5022fab701977c5d840bbc486d0'},
-            'block_number': block_number + 1,
-            'block_timestamp': rate_setter.w3.eth.getBlock(block_number + 1)['timestamp'],
-            'block_datetime': datetime.utcfromtimestamp(rate_setter.w3.eth.getBlock(block_number + 1)['timestamp']),
-            'transaction': events[0]['transaction']
-        }]
-
-        client.designate_beneficiary('0x73fCe79Bb6341e82E45cF58AAB680F6Af7019342')
-        events = client.get_events('BeneficiaryChanged')
-        assert events == [{
-            'event': 'BeneficiaryChanged',
+            'event': 'AuditableEventCreated',
             'event_args': {
-                'client_address': client.address,
-                'beneficiary_address': '0x73fCe79Bb6341e82E45cF58AAB680F6Af7019342'
+                'eventRawString': 'LatestWeightsUpdated',
+                'contentHash': 'edd22313d5aec9041b405953bfb10168b1d58b2e',
+                'eventType': '5012435b1002cec631930c670a6f948cfdff98ef'
             },
-            'block_number': block_number + 2,
-            'block_timestamp': rate_setter.w3.eth.getBlock(block_number + 2)['timestamp'],
-            'block_datetime': datetime.utcfromtimestamp(rate_setter.w3.eth.getBlock(block_number + 2)['timestamp']),
+            'block_number': block_number,
+            'block_timestamp': client.w3.eth.getBlock(block_number)['timestamp'],
+            'block_datetime': datetime.utcfromtimestamp(client.w3.eth.getBlock(block_number)['timestamp']),
             'transaction': events[0]['transaction']
         }]
 
@@ -519,4 +509,3 @@ class TestDeviseClient(object):
         assert 'FileCreated' in events
         assert 'LeptonAdded' in events
         assert 'BeneficiaryChanged' in events
-

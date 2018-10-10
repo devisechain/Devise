@@ -89,6 +89,20 @@ class BaseDeviseClient extends BaseEthereumClient {
     async init_contracts() {
         const token_abi = get_contract_abi('devise_token');
         let rental_abi = get_contract_abi('devise_rental_proxy');
+        rental_abi.push({
+            "constant": true,
+            "inputs": [],
+            "name": "accounting",
+            "outputs": [
+                {
+                    "name": "",
+                    "type": "address"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "view",
+            "type": "function"
+        });
         const contract_address = get_contract_address();
         const network_id = await this._get_network_id();
         this._token_contract = new this.web3.eth.Contract(token_abi, contract_address[network_id].DEVISE_TOKEN);

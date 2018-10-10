@@ -7,13 +7,19 @@
     :copyright: © 2018 Pit.AI
     :license: GPLv3, see LICENSE for more details.
 """
+import hashlib
 import json
+from json import JSONDecodeError
 
 import requests
 
 from devise.base import costs_gas, BaseDeviseClient
 from devise.clients.contract import USD_PRECISION
 from devise.clients.token import TOKEN_PRECISION
+
+EVENT_TYPES = {
+    "LATEST_WEIGHTS_UPDATED": "LatestWeightsUpdated"
+}
 
 
 class DeviseOwner(BaseDeviseClient):
@@ -40,6 +46,9 @@ class DeviseOwner(BaseDeviseClient):
 
     def get_rate_setter(self):
         return self._rental_contract.functions.rateSetter().call()
+
+    def get_audit_updater(self):
+        return self._audit_contract.functions.auditUpdater().call()
 
     def get_escrow_history(self):
         return self._rental_contract.functions.getEscrowHistory().call()
@@ -71,7 +80,7 @@ class DeviseOwner(BaseDeviseClient):
         """
         Updates the internal state of the contract
         """
-        return self._transact(self._rental_contract.functions.updateLeaseTerms(), {"from": self.address})
+        return self._transact(self._rental_contract.functions.updateGlobalState(), {"from": self.address})
 
     @costs_gas
     def add_master_node(self, address):
@@ -92,21 +101,28 @@ class DeviseOwner(BaseDeviseClient):
         return self._transact(self._rental_contract.functions.removeRateSetter(address), {"from": self.address})
 
     @costs_gas
+    def add_audit_updater(self, address):
+        return self._transact(self._audit_contract.functions.addAuditUpdater(address), {"from": self.address})
+
+    @costs_gas
+    def remove_audit_updater(self, address):
+        return self._transact(self._audit_contract.functions.removeAuditUpdater(address), {"from": self.address})
+
+    @costs_gas
     def set_eth_usd_rate(self):
-        price = self._get_eth_usd_price()
-        assert price is not None
+        try:
+            price = self._get_eth_usd_price()
+        except JSONDecodeError:
+            self.logger.info("!!!!!! WARNING: ERROR WHEN GETTING REAL TIME ETHER/USD PRICE. "
+                             "PLEASE TRY AGAIN LATER. !!!!!")
+            price = None
+        assert price is not None, "Fail to get real time Ether price. Please try again later!!!"
         self.logger.info("Setting the exchange rate at $%s per ether", price)
         price = int(float(price) * USD_PRECISION)
         assert price > 0
         self._transact(self._rental_contract.functions.setRateETHUSD(price), {"from": self.address})
 
-    @costs_gas
-    def log_file_created(self, content_hash):
-        """
-        Triggers a transaction which emits an event of type FileCreated from the rental smart contract
-        :param content_hash: The sha1 hash of the content of the file as a hex string
-        :return:
-        """
+    def _validate_hash(self, content_hash):
         # Validate hash received
         try:
             assert len(content_hash) == 40, "Hash provided must be a valid sha1 hash"
@@ -114,12 +130,28 @@ class DeviseOwner(BaseDeviseClient):
         except ValueError:
             raise AssertionError("Hash provided must be a valid sha1 hash")
 
+        return hash_bytes
+
+    @costs_gas
+    def latest_weights_updated(self, content_hash):
+        """
+        Triggers a transaction which emits an event of type LatestWeightsUpdated from the rental smart contract
+        :param content_hash: The sha1 hash of the content of the file as a hex string
+        :return: True if the transaction is successful and False otherwise
+        """
+        # Validate hash received
+        hash_bytes = self._validate_hash(content_hash)
+
         # Build a transaction with double the gas price estimated
         transaction = {
             "from": self.address,
             "gasPrice": self.w3.eth.generateGasPrice() * 2
         }
-        return self._transact(self._rental_contract.functions.logFileCreated(hash_bytes), transaction)
+        event_type = EVENT_TYPES["LATEST_WEIGHTS_UPDATED"]
+        event_type_hash = hashlib.sha1(event_type.encode('utf8')).hexdigest()
+        return self._transact(
+            self._audit_contract.functions.createAuditableEvent(event_type_hash, event_type, hash_bytes),
+            transaction)
 
     def _get_eth_usd_price(self):
         return json.loads(requests.get('https://api.gdax.com/products/ETH-USD/ticker').text).get("price", None)

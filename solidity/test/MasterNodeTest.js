@@ -1,38 +1,23 @@
-const DeviseRentalBase = artifacts.require("./DeviseRentalProxy");
-const DeviseEternalStorage = artifacts.require("./DeviseEternalStorage");
-const DeviseRental_v1 = artifacts.require("./test/DeviseRentalImpl");
-const DeviseToken = artifacts.require("./DeviseToken");
-const DateTime = artifacts.require("./DateTime");
-const moment = require('moment');
-const {timeTravel, evmSnapshot, evmRevert, timestampToDate} = require('./test-utils');
+const setupFixturesHelper = require('./helpers/setupFixtures');
+const {timeTravel, evmSnapshot, evmRevert} = require('./test-utils');
 const leptons = require('./leptons');
 const assertRevert = require('./helpers/assertRevert');
 
 const pitai = web3.eth.accounts[0];
-const clients = web3.eth.accounts.slice(3);
-let token;
+const tokenWallet = web3.eth.accounts[1];
+const escrowWallet = web3.eth.accounts[2];
+const revenueWallet = web3.eth.accounts[3];
+const clients = web3.eth.accounts.slice(4);
+
 let rental;
-let proxy;
+let lepton;
 let testSnapshotId = 0;
-let estor;
 
 async function setupFixtures() {
-    // Setup all the contracts
-    const cap = 10 * 10 ** 9 * 10 ** 6;
-    token = await DeviseToken.new(cap, {from: pitai});
-    dateTime = await DateTime.deployed();
-    estor = await DeviseEternalStorage.new();
-    // Create new upgradeable contract frontend (proxy)
-    proxy = await DeviseRentalBase.new(token.address, dateTime.address, estor.address, 0, {from: pitai});
-    // Set it's implementation version
-    await proxy.upgradeTo((await DeviseRental_v1.new()).address);
-    // Use implementation functions with proxy address
-    rental = DeviseRental_v1.at(proxy.address);
-
-    // test addLepton can't be called prior to authorize
-    await assertRevert(rental.addLepton(leptons[0], '', 1000000 * (3)));
-    await estor.authorize(proxy.address);
-
+    ({
+        rental,
+        lepton
+    } = await setupFixturesHelper(pitai, escrowWallet, tokenWallet, revenueWallet, null, true, false));
     // move forward 1 month
     await timeTravel(86400 * 31);
     // snapshot the blockchain
@@ -50,7 +35,7 @@ contract("DeviseRentalImpl", () => {
 
     it("Can add master node", async () => {
         await rental.addMasterNode(clients[1], {from: pitai});
-        const masterNodes = await rental.getMasterNodes.call();
+        const masterNodes = await lepton.getMasterNodes.call();
         assert.deepEqual([clients[1]], masterNodes);
     });
 

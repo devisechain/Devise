@@ -4,8 +4,10 @@ import "./DeviseRentalImplV2.sol";
 
 
 contract DeviseRentalImplV3 is DeviseRentalImplV2 {
+    using SafeMath for uint;
+
     uint internal _version;
-    uint8 internal seatsAvailable;
+    uint internal totalIncrementalUsefulness;
     string internal test;
     address masterNode;
 
@@ -27,19 +29,13 @@ contract DeviseRentalImplV3 is DeviseRentalImplV2 {
     }
 
     function setMasterNode(address addr) public onlyOwner {
+        leptonProxy.addMasterNode(addr);
         masterNode = addr;
     }
 
     function addLepton(bytes20 _lepton, bytes20 _prevLepton, uint _incrementalUsefulness) public onlyMaster {
-        require(_incrementalUsefulness > 0);
-        var (y, m,) = getCurrentDate();
-        uint IUTerm = calculateLeaseTerm(y, m) + 1;
-        if (IUTerm > leaseTerm + 1) {
-            // Price incrementalUsefulness is to be changed for a term past next term, we need to catchup missing terms first
-            updateLeaseTerms();
-        }
-        permData.addLepton(_lepton, _incrementalUsefulness);
-        priceNextTerm.totalIncrementalUsefulness = totalIncrementalUsefulness = totalIncrementalUsefulness.add(_incrementalUsefulness);
+        accessControl.updateGlobalState();
+        leptonProxy.addLepton(_lepton, _prevLepton, _incrementalUsefulness);
     }
 
     function getVersion() public view returns (uint) {

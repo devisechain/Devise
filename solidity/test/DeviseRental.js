@@ -2,15 +2,12 @@
 /* global assert, artifacts, it, contract, web3*/
 
 const crypto = require('crypto');
-const DeviseRentalImpl = artifacts.require("./test/DeviseRentalImplTest");
+const setupFixturesHelper = require('./helpers/setupFixtures');
 const DeviseRentalImplV2 = artifacts.require("./test/DeviseRentalImplV3");
-const DeviseToken = artifacts.require("./DeviseToken");
 const moment = require('moment');
-const DeviseRentalProxy = artifacts.require("./DeviseRentalProxy");
 const DateTime = artifacts.require("./DateTime");
 const assertRevert = require('./helpers/assertRevert');
-const DeviseEternalStorage = artifacts.require("./DeviseEternalStorage");
-const {transferTokens} = require('./test-utils');
+const {transferTokens, timestampToDate} = require('./test-utils');
 
 // parameters to be set by tests
 // default: num_clients = 6
@@ -19,9 +16,8 @@ let num_clients = 20;
 let num_st_blockchain = 4;
 
 let token;
-let dateutils;
 let rental_v2;
-let rentalProxy;
+let rental;
 let rentalProxy_v2;
 let proxy;
 const pitai = web3.eth.accounts[0];
@@ -63,7 +59,7 @@ function tokensaleTestAsArray(testTitle, i) {
     // TODO replace with payable provision function test through rental contract
     it(testTitle + (i + 1), async function () {
         // TODO temporarily transferring tokens to clients from token sale wallet
-        await transferTokens(token, rentalProxy, tokenWallet, clients[i], 1000);
+        await transferTokens(token, rental, tokenWallet, clients[i], 1000);
     });
 }
 
@@ -71,12 +67,12 @@ async function approvalTestAsArray(testTitle, i) {
     return it(testTitle + (i + 1), async function () {
         // approve 10,000,000 DVZ
         const dvz_amount = 10 * millionDVZ * microDVZ;
-        const tx = await token.approve(rentalProxy.address, dvz_amount, {from: clients[i]});
+        const tx = await token.approve(accountingProxy.address, dvz_amount, {from: clients[i]});
         let gas = tx.receipt.gasUsed;
         console.log("Gas used: ", gas);
         let cost = gas * gasPrice * ethPrice / 10 ** 9;
         console.log("The gas cost to call approve is ", cost);
-        const allowance = (await token.allowance(clients[i], rentalProxy.address)).toNumber();
+        const allowance = (await token.allowance(clients[i], accountingProxy.address)).toNumber();
         assert.equal(allowance, dvz_amount, "Allowance should be 1000000.");
     });
 }
@@ -97,7 +93,7 @@ async function provisionTestAsArray(testTitle, i) {
 
 async function designateBeneficiaryTestAsArray(testTitle, i) {
     return it(testTitle + (i + 1), async function () {
-        await rentalProxy.getBeneficiary.call({from: clients[i]}).then(function (ben) {
+        await rental.getBeneficiary.call({from: clients[i]}).then(function (ben) {
             assert.equal(ben, clients[i]);
         });
         const tx = await proxy.designateBeneficiary(clients[clients.length - 1 - i], {from: clients[i]});
@@ -108,7 +104,7 @@ async function designateBeneficiaryTestAsArray(testTitle, i) {
         const ben = await proxy.getClientSummary.call(clients[i]);
         assert.equal(ben[0], clients[clients.length - 1 - i]);
         assert.equal(ben.length, 7);
-        return rentalProxy.getBeneficiary.call({from: clients[i]}).then(function (ben) {
+        return rental.getBeneficiary.call({from: clients[i]}).then(function (ben) {
             assert.equal(ben, clients[clients.length - 1 - i]);
         });
     });
@@ -140,17 +136,17 @@ function addLeptonAsArray(testTitle, i) {
         let str1 = leptons[i];
         const prevLepton = i > 0 ? leptons[i - 1] : '';
         let usefulness1 = usefulnessSet[i];
-        const tx = await rentalProxy.addLepton(str1, prevLepton, usefulness1, {from: pitai});
+        const tx = await rental.addLepton(str1, prevLepton, usefulness1, {from: pitai});
         let gas = tx.receipt.gasUsed;
         console.log("Gas used: ", gas);
         let cost = gas * gasPrice * ethPrice / 10 ** 9;
         console.log("The gas cost to call addLepton is ", cost);
-        const price = (await rentalProxy.getIndicativeRentPerSeatNextTerm.call()).toNumber();
+        const price = (await rental.getIndicativeRentPerSeatNextTerm.call()).toNumber();
         total_price += min_price_per_bit * usefulness1;
         console.log("The usefulness is ", usefulness1);
         console.log("The next term price for the first month ", price);
         assert.equal(price, total_price);
-        const price2 = (await rentalProxy.getIndicativeRentPerSeatNextTerm.call()).toNumber();
+        const price2 = (await rental.getIndicativeRentPerSeatNextTerm.call()).toNumber();
         assert.equal(price2, total_price);
     });
 }
@@ -159,14 +155,14 @@ let historicalDataPrice = 0;
 
 function requestHistoricalDataAsArray(testTitle, i) {
     it(testTitle + (i + 1), async function () {
-        const before = (await rentalProxy.getAllowance.call({from: clients[i]})).toNumber();
-        const txid = await rentalProxy.requestHistoricalData({from: clients[i]});
+        const before = (await rental.getAllowance.call({from: clients[i]})).toNumber();
+        const txid = await rental.requestHistoricalData({from: clients[i]});
         let gas = txid.receipt.gasUsed;
         console.log("Gas used: ", gas);
         let cost = gas * gasPrice * ethPrice / 10 ** 9;
         console.log("The gas cost to call requestHistoricalData is ", cost);
         if (i === 0) {
-            const after = (await rentalProxy.getAllowance.call({from: clients[i]})).toNumber();
+            const after = (await rental.getAllowance.call({from: clients[i]})).toNumber();
             assert.equal(after - before, historicalDataPrice);
         }
     });
@@ -178,6 +174,15 @@ function requestHistoricalDataAsArray(testTitle, i) {
 
 function getRandomInt(max) {
     return Math.floor(Math.random() * Math.floor(max)) + 1;
+}
+
+async function getProratedDues(seats, extraMonths) {
+    // mimic the price calculation used in solidity
+    const price = (await rental.getRentPerSeatCurrentTerm.call()).toNumber() * seats;
+    let d = timestampToDate(web3.eth.getBlock(web3.eth.blockNumber).timestamp);
+    let daysInMonth = new Date(d.getYear(), d.getMonth() + 1, 0).getDate();
+    const prorated = Math.floor((price / daysInMonth) * (daysInMonth - (moment(d).utc().date() - 1)));
+    return extraMonths ? (price * extraMonths * seats) + prorated : prorated;
 }
 
 function prorata() {
@@ -205,16 +210,17 @@ function leaseAsArray(testTitle, i, j) {
         // approve so to recognize revenue
         // 10 million tokens
         const rev_amount = 10 * millionDVZ * microDVZ;
-        await token.approve(rentalProxy.address, rev_amount, {from: escrowWallet});
-        const txid = await rentalProxy.leaseAll(bids_per_round[0], seats_per_round[0], {from: clients[i]});
+        await token.approve(accountingProxy.address, rev_amount, {from: escrowWallet});
+        const txid = await rental.leaseAll(bids_per_round[0], seats_per_round[0], {from: clients[i]});
+        const partial_seats = (await rental.getCurrentTermSeats.call({from: clients[i]})).toNumber();
         console.log("Lease round " + (j + 1));
         let gas = txid["receipt"]["gasUsed"];
         console.log("Gas used: ", gas);
         costs[i] += gas * gasPrice * ethPrice / 10 ** 9;
-        seatsAvailable -= seats_per_round[0];
+        seatsAvailable -= partial_seats;
         if (txid["logs"][5] !== undefined)
             console.log(txid["logs"][5]["args"]["title"], txid["logs"][5]["args"]["addr"]);
-        const bal = (await rentalProxy.getAllowance.call({from: clients[i]})).toNumber();
+        const bal = (await rental.getAllowance.call({from: clients[i]})).toNumber();
         let ns = num_leptons;
         pro_rata = prorata();
         console.log("The price for the month is ", balMap.get(ns));
@@ -224,44 +230,47 @@ function leaseAsArray(testTitle, i, j) {
         const dvz_amount = 10 * millionDVZ * microDVZ;
         let exp = dvz_amount - client_rental_m1[i];
         console.log(exp);
-        if (seatsAvailable >= 0)
+        if (partial_seats === seats_per_round[0]) {
             assert.isAtMost(Math.abs(bal - exp), 1);
-        else if (seatsAvailable < 0 && Math.abs(seatsAvailable) < seats_per_round[0]) {
-            const partial_seats = (seats_per_round[0] - Math.abs(seatsAvailable)) * totalUsefulness;
-            exp = dvz_amount - Math.floor(partial_seats * min_price_per_bit * pro_rata);
-            assert.isAtMost(Math.abs(bal - exp), 1);
-        }
-        else
+        } else if (partial_seats > 0) {
+            let d = timestampToDate(web3.eth.getBlock(web3.eth.blockNumber).timestamp);
+            const daysInMonth = new Date(d.getYear(), d.getMonth() + 1, 0).getDate();
+            const shouldPay = Math.floor(partial_seats * (min_price_per_bit * totalUsefulness / daysInMonth) * (daysInMonth - (moment(d).utc().date() - 1)));
+            const paid = dvz_amount - bal;
+            assert.equal(paid, shouldPay);
+        } else {
             assert.equal(bal, dvz_amount);
+        }
+
         console.log(costs[i]);
     });
 }
 
-function updateLeaseTerms(testTitle) {
+function updateGlobalState(testTitle) {
     it(testTitle, async function () {
-        await token.approve(rentalProxy.address, 100 * microDVZ, {from: escrowWallet});
-        const txid = await rentalProxy.updateLeaseTerms({from: pitai});
+        await token.approve(accountingProxy.address, 100 * microDVZ, {from: escrowWallet});
+        const txid = await rental.updateGlobalState({from: pitai});
         let gas = txid["receipt"]["gasUsed"];
         console.log("Gas used: ", gas);
-        console.log("Current term price is ", (await rentalProxy.getRentPerSeatCurrentTerm.call()).toNumber());
+        console.log("Current term price is ", (await rental.getRentPerSeatCurrentTerm.call()).toNumber());
         let cost = gas * gasPrice * ethPrice / 10 ** 9;
-        console.log("The gas cost to call updateLeaseTerms is ", cost);
+        console.log("The gas cost to call updateGlobalState is ", cost);
     });
 }
 
 // noinspection JSUnusedLocalSymbols
 function getPricesNextTermAsArray(testTitle, i) {
     it(testTitle, function () {
-        return rentalProxy.getIndicativeRentPerSeatNextTerm.call().then(function (price) {
+        return rental.getIndicativeRentPerSeatNextTerm.call().then(function (price) {
             console.log("The price for the next term is ", price.toNumber());
         });
     });
 }
 
 async function isRenter(client) {
-    const n = await rentalProxy.getNumberOfRenters.call();
+    const n = await rental.getNumberOfRenters.call();
     for (let i = 0; i < n; i++) {
-        const renter = await rentalProxy.getRenter.call(i);
+        const renter = await rental.getRenter.call(i);
         if (renter === client)
             return true;
     }
@@ -270,39 +279,20 @@ async function isRenter(client) {
 
 contract("DeviseRental", () => {
     before(async () => {
-        // test case 1: DeviseToken contract deployed
-        const cap = 10 * 10 ** 9 * 10 ** 6;
-        token = await DeviseToken.new(cap, {from: pitai});
+        ({
+            rental,
+            proxy,
+            token,
+            dateTime,
+            auctionProxy,
+            accountingProxy
+        } = await setupFixturesHelper(pitai, escrowWallet, tokenWallet, revenueWallet, null, true, false));
 
-        const blockNumber = web3.eth.blockNumber;
-        const openingTime = web3.eth.getBlock(blockNumber).timestamp;
-        const closingTime = openingTime + 360 * 24 * 60 * 60;
-        assert.notEqual(token.address, 0x0, "DeviseToken contract address should not be NULL.");
-        assert.notEqual(token.address, 0x0, "DeviseToken contract address should not be NULL.");
-        // mint 1 billion tokens for token sale
-        const saleAmount = 1 * 10 ** 9 * 10 ** 6;
-        await token.mint(tokenWallet, saleAmount);
-        dateutils = await DateTime.new({from: pitai});
-        const dstore = await DeviseEternalStorage.new({from: pitai});
-        proxy = await DeviseRentalProxy.new(token.address, dateutils.address, dstore.address, 0, {from: pitai});
-
-        await dstore.authorize(proxy.address, {from: pitai});
-
-        const rentalImpl = await DeviseRentalImpl.new({from: pitai});
-
-        await proxy.upgradeTo(rentalImpl.address, {from: pitai});
-
-        // rentalProxy will have all the interfaces of DeviseRentalImpl contract
-        // future function calls are directly from rentalProxy
-        rentalProxy = await DeviseRentalImpl.at(proxy.address);
-        await rentalProxy.setEscrowWallet(escrowWallet);
-        await rentalProxy.setRevenueWallet(revenueWallet);
-        await rentalProxy.addMasterNode(pitai);
+        await rental.addMasterNode(pitai);
         rentalProxy_v2 = await DeviseRentalImplV2.at(proxy.address);
-        assert.equal(proxy.address, rentalProxy.address);
+        assert.equal(proxy.address, rental.address);
         assert.equal(proxy.address, rentalProxy_v2.address);
-        dateutils = await DateTime.deployed();
-        rental_v2 = await DeviseRentalImplV2.new(token.address, dateutils.address);
+        rental_v2 = await DeviseRentalImplV2.new(token.address, dateTime.address);
     });
 
     // test case 1: Tokensale for client
@@ -321,13 +311,13 @@ contract("DeviseRental", () => {
     })();
 
     it("Client beneficiaries can get their money accounts", async () => {
-        assert.equal(await rentalProxy.getClientForBeneficiary.call({from: clients[1]}), clients[1]);
-        await rentalProxy.designateBeneficiary(clients[2], {from: clients[1]});
-        assert.equal((await rentalProxy.getClientForBeneficiary.call({from: clients[2]})), clients[1]);
-        assert.equal(await rentalProxy.getClientForBeneficiary.call({from: clients[1]}), clients[1]);
-        await rentalProxy.designateBeneficiary(clients[1], {from: clients[1]});
-        assert.equal(await rentalProxy.getClientForBeneficiary.call({from: clients[1]}), clients[1]);
-        assert.equal(await rentalProxy.getClientForBeneficiary.call({from: clients[2]}), clients[2]);
+        assert.equal(await rental.getClientForBeneficiary.call({from: clients[1]}), clients[1]);
+        await rental.designateBeneficiary(clients[2], {from: clients[1]});
+        assert.equal((await rental.getClientForBeneficiary.call({from: clients[2]})), clients[1]);
+        assert.equal(await rental.getClientForBeneficiary.call({from: clients[1]}), clients[1]);
+        await rental.designateBeneficiary(clients[1], {from: clients[1]});
+        assert.equal(await rental.getClientForBeneficiary.call({from: clients[1]}), clients[1]);
+        assert.equal(await rental.getClientForBeneficiary.call({from: clients[2]}), clients[2]);
     });
 
     // test case 4: Devise Rental: designate beneficiary by client
@@ -343,15 +333,15 @@ contract("DeviseRental", () => {
     // test case 6: Devise Rental: apply for power user status by client1
     let clubFee = 0;
     it("Devise Rental: apply for power user status by client1", async () => {
-        const initialBalance = (await rentalProxy.getAllowance({from: clients[0]})).toNumber();
-        const tx = await rentalProxy.applyForPowerUser({from: clients[0]});
+        const initialBalance = (await rental.getAllowance({from: clients[0]})).toNumber();
+        const tx = await rental.applyForPowerUser({from: clients[0]});
         let gas = tx.receipt.gasUsed;
         console.log("Gas used: ", gas);
         let cost = gas * gasPrice * ethPrice / 10 ** 9;
         console.log("The gas cost to call applyForPowerUser is ", cost);
-        const newBalance = (await rentalProxy.getAllowance({from: clients[0]})).toNumber();
+        const newBalance = (await rental.getAllowance({from: clients[0]})).toNumber();
         assert.equal(initialBalance - newBalance, clubFee);
-        assert.equal(await rentalProxy.isPowerUser({from: clients[0]}), true);
+        assert.equal(await rental.isPowerUser({from: clients[0]}), true);
     });
 
     // test case 7: Devise Rental: add lepton and get total usefulness
@@ -368,13 +358,13 @@ contract("DeviseRental", () => {
 
     // IMPORTANT: addLepton does not change usefulness for current term, only next term.
     it("Devise Rental: PriceCurrentTerm is based on correct usefulness", async () => {
-        const priceCur = await rentalProxy.getRentPerSeatCurrentTerm();
-        const priceNext = await rentalProxy.getIndicativeRentPerSeatNextTerm();
+        const priceCur = await rental.getRentPerSeatCurrentTerm();
+        const priceNext = await rental.getIndicativeRentPerSeatNextTerm();
         assert.isAbove(priceCur.toNumber(), 0);
         assert.isAbove(priceNext.toNumber(), 0);
         await timeTravel(86400 * 31);
-        const priceCur2 = await rentalProxy.getRentPerSeatCurrentTerm();
-        const priceNext2 = await rentalProxy.getIndicativeRentPerSeatNextTerm();
+        const priceCur2 = await rental.getRentPerSeatCurrentTerm();
+        const priceNext2 = await rental.getIndicativeRentPerSeatNextTerm();
         assert.isAbove(priceCur2.toNumber(), 0);
         assert.equal(priceNext2.toNumber(), priceCur2.toNumber());
 
@@ -419,20 +409,20 @@ contract("DeviseRental", () => {
     }
 
     // test case 10: Devise Rental: calculate lepton prices for next term
-    updateLeaseTerms("Devise Rental: calculate lepton prices for next term");
+    updateGlobalState("Devise Rental: calculate lepton prices for next term");
 
     // test case 11: Devise Rental: get lepton price for next term
     getPricesNextTermAsArray("Devise Rental: get lepton " + 1 + " price for next term", 0);
 
     // test case 12: Devise Rental: withdraw by client1
     it("Devise Rental: withdraw by client1", async function () {
-        await token.approve(rentalProxy.address, 100000 * microDVZ, {from: escrowWallet});
-        const tx = await rentalProxy.withdraw(5000 * microDVZ, {from: clients[0]});
+        await token.approve(accountingProxy.address, 100000 * microDVZ, {from: escrowWallet});
+        const tx = await rental.withdraw(5000 * microDVZ, {from: clients[0]});
         let gas = tx.receipt.gasUsed;
         console.log("Gas used: ", gas);
         let cost = gas * gasPrice * ethPrice / 10 ** 9;
         console.log("The gas cost to call withdraw is ", cost);
-        const bal = (await rentalProxy.getAllowance.call({from: clients[0]})).toNumber();
+        const bal = (await rental.getAllowance.call({from: clients[0]})).toNumber();
         // let ns = num_leptons > num_fixed_leptons ? num_fixed_leptons : num_leptons;
         console.log("The balance remaining after withdrawal ", bal);
         const dvz_amount = 10 * millionDVZ * microDVZ;
@@ -445,17 +435,17 @@ contract("DeviseRental", () => {
         // approve so to recognize revenue
         // 1 billion tokens
         const rev_amount = 1000 * millionDVZ * microDVZ;
-        await token.approve(rentalProxy.address, rev_amount, {from: escrowWallet});
-        await rentalProxy.getAllowance.call({from: clients[0]});
+        await token.approve(accountingProxy.address, rev_amount, {from: escrowWallet});
+        await rental.getAllowance.call({from: clients[0]});
         let gas = 0;
         console.log("Gas used: ", gas);
         let cost = gas * gasPrice * ethPrice / 10 ** 9;
         console.log("The gas cost to call getAllowance is ", cost);
         // console.log(txid["logs"][2]["args"]["num"].toNumber());
-        const prc_curr = (await rentalProxy.getRentPerSeatCurrentTerm.call()).toNumber();
-        const prc = (await rentalProxy.getRentPerSeatCurrentTerm.call()).toNumber();
+        const prc_curr = (await rental.getRentPerSeatCurrentTerm.call()).toNumber();
+        const prc = (await rental.getRentPerSeatCurrentTerm.call()).toNumber();
         console.log("The price for all leptons in month 2: ", prc);
-        const bal = (await rentalProxy.getAllowance.call({from: clients[0]})).toNumber();
+        const bal = (await rental.getAllowance.call({from: clients[0]})).toNumber();
         const dvz_amount = 10 * millionDVZ * microDVZ;
         const bids_prc = Math.floor(bids[0][0] * totalUsefulness / IUDecimal);
         if (bids_prc >= prc_curr) {
@@ -481,11 +471,11 @@ contract("DeviseRental", () => {
         let bids_per_round = bids[4].slice(0);
         console.log("Client " + 4, " bid ", bids_per_round);
         let seats_per_round = seats.slice(0);
-        const initialBal = (await rentalProxy.getAllowance.call({from: clients[4]})).toNumber();
+        const initialBal = (await rental.getAllowance.call({from: clients[4]})).toNumber();
         const approval_amt = 1000 * millionDVZ * microDVZ;
-        await token.approve(rentalProxy.address, approval_amt, {from: escrowWallet});
-        const txid = await rentalProxy.leaseAll(bids_per_round[0], seats_per_round[0], {from: clients[4]});
-        const postLeaseBal = (await rentalProxy.getAllowance.call({from: clients[4]})).toNumber();
+        await token.approve(accountingProxy.address, approval_amt, {from: escrowWallet});
+        const txid = await rental.leaseAll(bids_per_round[0], seats_per_round[0], {from: clients[4]});
+        const postLeaseBal = (await rental.getAllowance.call({from: clients[4]})).toNumber();
         assert.isAbove(initialBal, postLeaseBal);
         client_rental_m1[4] += initialBal - postLeaseBal;
         console.log("Lease round " + 1);
@@ -494,37 +484,44 @@ contract("DeviseRental", () => {
         costs[4] = gas * gasPrice * ethPrice / 10 ** 9;
         if (txid["logs"][5] !== undefined)
             console.log(txid["logs"][5]["args"]["title"], txid["logs"][5]["args"]["addr"]);
-        const newBal = (await rentalProxy.getAllowance.call({from: clients[4]})).toNumber();
+        const newBal = (await rental.getAllowance.call({from: clients[4]})).toNumber();
         console.log("The new balance after second lease for client 5 ", newBal);
-        console.log("Current term price is ", (await rentalProxy.getRentPerSeatCurrentTerm()).toNumber());
-        console.log("Next term price is ", (await rentalProxy.getIndicativeRentPerSeatNextTerm()).toNumber());
+        console.log("Current term price is ", (await rental.getRentPerSeatCurrentTerm()).toNumber());
+        console.log("Next term price is ", (await rental.getIndicativeRentPerSeatNextTerm()).toNumber());
         console.log(costs[4]);
     });
 
     // test case 15: calculate lease prices in stage 2
     it("Devise Rental: time travel stage 2", async function () {
-        const month_plus_one_prc = (await rentalProxy.getIndicativeRentPerSeatNextTerm()).toNumber();
+        const balPreTimeTravel = (await rental.getAllowance.call({from: clients[4]})).toNumber();
+        let priceOfOwnBid = Math.floor(bids[4][0] * (totalUsefulness / 1000000) * seats[0]);
+        const month_plus_one_prc = (await rental.getIndicativeRentPerSeatNextTerm()).toNumber();
         console.log("Month 1 price = " + month_plus_one_prc);
         await timeTravel(86400 * 35);
-        const month_plus_two_prc = (await rentalProxy.getRentPerSeatCurrentTerm()).toNumber();
+        const month_plus_two_prc = (await rental.getRentPerSeatCurrentTerm()).toNumber();
         console.log("Month 2 price = " + month_plus_two_prc);
 
-        await token.approve(rentalProxy.address, 1000 * millionDVZ * microDVZ, {from: escrowWallet});
-        const txid = await rentalProxy.updateLeaseTerms({from: pitai});
+        await token.approve(accountingProxy.address, 1000 * millionDVZ * microDVZ, {from: escrowWallet});
+        const txid = await rental.updateGlobalState({from: pitai});
         let gas = txid.receipt.gasUsed;
         console.log("Gas used: ", gas);
         let cost = gas * gasPrice * ethPrice / 10 ** 9;
-        console.log("The gas cost to call updateLeaseTerms is ", cost);
-        console.log("Current term price is ", (await rentalProxy.getRentPerSeatCurrentTerm()).toNumber());
-        const price_next_term = await rentalProxy.getIndicativeRentPerSeatNextTerm.call();
+        console.log("The gas cost to call updateGlobalState is ", cost);
+        console.log("Current term price is ", (await rental.getRentPerSeatCurrentTerm()).toNumber());
+        const price_next_term = await rental.getIndicativeRentPerSeatNextTerm.call();
         console.log("The price for the next term is ", price_next_term.toNumber());
 
-        // provision 10,000,000 DVZ
+        // this client provisioned 10,000,000 DVZ
         const dvz_amount = 10 * millionDVZ * microDVZ;
-        const prc_curr = (await rentalProxy.getRentPerSeatCurrentTerm.call()).toNumber();
+        const prc_curr = (await rental.getRentPerSeatCurrentTerm.call()).toNumber();
+        const prc_per_bit_curr = prc_curr / Math.floor(totalUsefulness / 1000000);
         console.log("The price for all leptons in month 3: ", prc_curr);
-        const bal = (await rentalProxy.getAllowance.call({from: clients[4]})).toNumber();
-        if (bids[4][0] >= prc_curr / Math.floor(totalUsefulness / 1000000)) {
+        const bal = (await rental.getAllowance.call({from: clients[4]})).toNumber();
+        // if this client was removed for not being able to afford own bid, make sure he wasn't charged
+        if (balPreTimeTravel < priceOfOwnBid) {
+            assert.equal(bal, balPreTimeTravel);
+        } else if (bids[4][0] >= prc_per_bit_curr) {
+            // check if this client paid for first + second, or first + second + third months
             let charge = seats[0] * prc_curr;
             let exp1 = dvz_amount - client_rental_m1[4] - (seats[0] * month_plus_one_prc);
             let exp2 = dvz_amount - client_rental_m1[4] - (seats[0] * month_plus_one_prc) - (seats[0] * month_plus_two_prc);
@@ -545,14 +542,14 @@ contract("DeviseRental", () => {
     // test case 17: calculate lease prices in stage 3
     it.skip("Devise Rental: time travel stage 3", async function () {
         await timeTravel(86400 * 180);
-        await token.approve(rentalProxy.address, 10000 * millionDVZ * microDVZ, {from: escrowWallet});
-        const txid = await rentalProxy.updateLeaseTerms({from: pitai});
+        await token.approve(accountingProxy.address, 10000 * millionDVZ * microDVZ, {from: escrowWallet});
+        const txid = await rental.updateGlobalState({from: pitai});
         let gas = txid.receipt.gasUsed;
         console.log("Gas used: ", gas);
         let cost = gas * gasPrice * ethPrice / 10 ** 9;
-        console.log("The gas cost to call updateLeaseTerms is ", cost);
-        console.log("Current term price is ", (await rentalProxy.getRentPerSeatCurrentTerm.call()).toNumber());
-        const price = await rentalProxy.getIndicativeRentPerSeatNextTerm.call();
+        console.log("The gas cost to call updateGlobalState is ", cost);
+        console.log("Current term price is ", (await rental.getRentPerSeatCurrentTerm.call()).toNumber());
+        const price = await rental.getIndicativeRentPerSeatNextTerm.call();
         console.log("The price for the next term is ", price.toNumber());
     });
 
@@ -568,10 +565,10 @@ contract("DeviseRental", () => {
         // console.log("The price for all leptons ", txid["logs"][len - 4]["args"]["num"].toNumber());
         // console.log("The number of seats ", txid["logs"][len - 3]["args"]["num"].toNumber());
         // console.log("The amount that has been charged ", txid["logs"][len - 2]["args"]["amount"].toNumber());
-        const prc = (await rentalProxy.getRentPerSeatCurrentTerm.call()).toNumber();
+        const prc = (await rental.getRentPerSeatCurrentTerm.call()).toNumber();
         console.log("The price for all leptons in month 9: ", prc);
-        const bal = (await rentalProxy.getAllowance.call({from: clients[4]})).toNumber();
-        const prc_per_bit_next = (await rentalProxy.getRentPerSeatCurrentTerm.call()).toNumber() / Math.floor(totalUsefulness / 1000000);
+        const bal = (await rental.getAllowance.call({from: clients[4]})).toNumber();
+        const prc_per_bit_next = (await rental.getRentPerSeatCurrentTerm.call()).toNumber() / Math.floor(totalUsefulness / 1000000);
         const dvz_amount = 10 * millionDVZ * microDVZ;
         if (bids[4][0] >= prc_per_bit_next) {
             let charge = seats[0] * Math.floor(prc_per_bit_next * Math.floor(totalUsefulness / 1000000));

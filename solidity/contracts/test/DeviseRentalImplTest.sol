@@ -10,18 +10,6 @@ contract DeviseRentalImplTest is DeviseRentalImpl {
     }
 
     function mockCurrentTotalUsefulness() public onlyTest {
-        priceCurrentTerm.totalIncrementalUsefulness = priceNextTerm.totalIncrementalUsefulness;
     }
 
-    function getPowerUserMinimum() public view returns (uint) {
-        return powerUserMinimum;
-    }
-
-    function getUsefulnessBaseline() public view returns (uint32) {
-        return usefulnessBaseline;
-    }
-
-    function getMaxSeatPercentage() public view returns (uint, uint) {
-        return (maxSeatPercentage, maxSeatMultiple);
-    }
 }

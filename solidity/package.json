@@ -32,7 +32,7 @@
     "mocha-junit-reporter": "^1.17.0",
     "moment": "^2.22.1",
     "openzeppelin-solidity": "git+https://git@github.com/OpenZeppelin/openzeppelin-solidity.git#746673a94f7e43835fcb5cb7b1af8ff1eea4e276",
-    "solhint": "^1.2.1",
+    "solhint": "^1.3.0",
     "solidity-coverage": "^0.5.4",
     "solium": "^1.1.6",
     "truffle": "4.1.11"

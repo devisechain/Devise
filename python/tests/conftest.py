@@ -52,9 +52,9 @@ def owner_client():
 
     escrow_wallet_account = Web3().eth.accounts[3]
     client_wallet = DeviseClient(private_key=TEST_KEYS[3])
-    client_wallet._transact(
-        client_wallet._token_contract.functions.approve(client_wallet._rental_contract.address, int(1e20)),
-        {"from": escrow_wallet_account})
+    accounting_contract = client_wallet._rental_contract.functions.accounting().call()
+    client_wallet._transact(client_wallet._token_contract.functions.approve(accounting_contract, int(1e20)),
+                            {"from": escrow_wallet_account})
     return client
 
 
@@ -108,6 +108,18 @@ def master_node():
 
 @pytest.fixture()
 def rate_setter():
+    """Devise Client fixture created for setting rate"""
+    client = DeviseOwner(private_key=TEST_KEYS[5])
+
+    net_id = client.w3.version.network
+    if net_id == "1":
+        raise RuntimeError("Cowardly refusing to run tests against MainNet!!")
+
+    return client
+
+
+@pytest.fixture()
+def weights_updater():
     """Devise Client fixture created for setting rate"""
     client = DeviseOwner(private_key=TEST_KEYS[5])
 
