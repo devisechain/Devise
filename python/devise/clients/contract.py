@@ -432,13 +432,24 @@ class RentalContract(BaseDeviseClient):
 
         # get all previous rental contract addresses in case of forks
         rental_contracts = get_rental_contract_addresses(network_id=network_id)
-        # Also include events emitted through the accountingProxy and auctionProxy
-        rental_contracts += [self._rental_contract.functions.accounting().call(),
-                             self._rental_contract.functions.accessControl().call()]
         for contract_address in rental_contracts:
             contract = w3.eth.contract(address=contract_address, abi=rental_abi)
+            try:
+                event_filter = contract.eventFilter(event_name, {'fromBlock': from_block, 'toBlock': 'latest'})
+                events += event_filter.get_all_entries()
+            except ValueError:
+                # event is not declared in this contract, skip
+                pass
+
+        # Also add matching event from standalone audit contract
+        audit_abi = get_contract_abi('AuditImpl')
+        contract = w3.eth.contract(address=self._audit_contract.address, abi=audit_abi)
+        try:
             event_filter = contract.eventFilter(event_name, {'fromBlock': from_block, 'toBlock': 'latest'})
             events += event_filter.get_all_entries()
+        except ValueError:
+            # event is not declared in this contract, skip
+            pass
 
         # Format events for humans
         results = []

@@ -485,20 +485,20 @@ class TestDeviseClient(object):
         assert sha1 == 'edd22313d5aec9041b405953bfb10168b1d58b2e'
 
     def test_get_all_events(self, client, owner_client, rate_setter):
-        owner_client.add_rate_setter(rate_setter.address)
+        owner_client.add_audit_updater(rate_setter.address)
+        rate_setter.latest_weights_updated('edd22313d5aec9041b405953bfb10168b1d58b2e')
         block_number = rate_setter.w3.eth.getBlock('latest')['number']
-
-        client.designate_beneficiary('0x73fCe79Bb6341e82E45cF58AAB680F6Af7019342')
-        events = client.get_events('BeneficiaryChanged')
+        events = client.get_events('AuditableEventCreated')
         assert events == [{
-            'event': 'BeneficiaryChanged',
+            'event': 'AuditableEventCreated',
             'event_args': {
-                'client_address': client.address,
-                'beneficiary_address': '0x73fCe79Bb6341e82E45cF58AAB680F6Af7019342'
+                'eventRawString': 'LatestWeightsUpdated',
+                'contentHash': 'edd22313d5aec9041b405953bfb10168b1d58b2e',
+                'eventType': '5012435b1002cec631930c670a6f948cfdff98ef'
             },
-            'block_number': block_number + 1,
-            'block_timestamp': client.w3.eth.getBlock(block_number + 1)['timestamp'],
-            'block_datetime': datetime.utcfromtimestamp(client.w3.eth.getBlock(block_number + 1)['timestamp']),
+            'block_number': block_number,
+            'block_timestamp': client.w3.eth.getBlock(block_number)['timestamp'],
+            'block_datetime': datetime.utcfromtimestamp(client.w3.eth.getBlock(block_number)['timestamp']),
             'transaction': events[0]['transaction']
         }]
 
