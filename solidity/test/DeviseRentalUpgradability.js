@@ -1,8 +1,9 @@
 const DeviseRentalProxy = artifacts.require('DeviseRentalProxy');
 const Rental_V0 = artifacts.require('./test/DeviseRentalImplTest');
-const DeviseToken = artifacts.require("./DeviseToken");
-const DateTime = artifacts.require("./DateTime");
-const DeviseEternalStorage = artifacts.require("./DeviseEternalStorage");
+const LeptonStorage = artifacts.require("./LeptonStorage");
+const DeviseLeptonProxy = artifacts.require("./DeviseMiningProxy");
+const DeviseLeptonImpl = artifacts.require("./DeviseMiningImpl");
+const setupFixturesHelper = require('./helpers/setupFixtures');
 const {transferTokens} = require('./test-utils');
 
 const leptons = require('./leptons');
@@ -10,55 +11,74 @@ const leptons = require('./leptons');
 contract('DeviseRentalUpgradability', (accounts) => {
     let proxy;
     let impl_v0;
-    let rental_v0;
-    let proxyOwner;
-    let tokenWallet;
-    let pitaiWallet;
-    let token;
-    let estor;
-    let dateutils;
+    let rental;
+    let leptonProxy;
+    let leptonImpl;
     const pitai = web3.eth.accounts[0];
+    let proxyOwner = pitai;
+    let tokenWallet = pitai;
+    let escrowWallet = accounts[1];
+    let revenueWallet = accounts[2];
+    let auctionProxy;
+    let accountingProxy;
+    let accessControlProxy;
+    let accessControl;
+    let auction;
+    let accounting;
+    let token;
+    let eternalStorage;
+    let dateTime;
 
     beforeEach(async function () {
-        try {
-            proxyOwner = accounts[0];
-            pitaiWallet = accounts[1];
-            const cap = 10 ** 9 * 10 ** 18;
-            token = await DeviseToken.new(cap, {from: proxyOwner});
-            tokenWallet = proxyOwner;
-            // mint 1 billion tokens for token sale
-            const saleAmount = 1 * 10 ** 9 * 10 ** 6;
-            await token.mint(tokenWallet, saleAmount);
-            dateutils = await DateTime.new({from: proxyOwner});
-            estor = await DeviseEternalStorage.new();
-            proxy = await DeviseRentalProxy.new(token.address, dateutils.address, estor.address, 0, {from: proxyOwner});
-            await token.approve(proxy.address, 1000000000000000000000000, {from: pitaiWallet});
-            impl_v0 = await Rental_V0.new({from: proxyOwner});
-            console.log("logic contract implementation address ", impl_v0.address);
-            rental_v0 = Rental_V0.at(proxy.address);
-            console.log("proxy contract address ", rental_v0.address);
-        } catch (e) {
-            console.error(e);
-            expect.fail();
-        }
+        ({
+            token,
+            dateTime,
+            auctionProxy,
+            auction,
+            accountingProxy,
+            accounting,
+            accessControlProxy,
+            accessControl,
+            eternalStorage,
+            dateTime
+        } = await setupFixturesHelper(proxyOwner, escrowWallet, tokenWallet, revenueWallet, null, false, false));
+        proxy = await DeviseRentalProxy.new(token.address, {from: proxyOwner});
+        impl_v0 = await Rental_V0.new({from: proxyOwner});
+        rental = Rental_V0.at(proxy.address);
+        await auction.authorize(proxy.address);
+        await accounting.authorize(proxy.address);
     });
 
     describe('Hard Fork', () => {
-        it('new proxy totalIncrementalUsefulness arg sets total incremental usefulness', async function () {
-            await estor.authorize(proxy.address);
+        it('new proxy doesn\'t lose totalIncrementalUsefulness on hard fork', async function () {
             await proxy.upgradeTo(impl_v0.address, {from: proxyOwner});
-            await rental_v0.addMasterNode(pitai);
-            await rental_v0.addLepton(leptons[0], '', 3);
-            await rental_v0.addLepton(leptons[1], leptons[0], 2);
-            await rental_v0.addLepton(leptons[2], leptons[1], 1);
-            const proxy2 = await DeviseRentalProxy.new(token.address, dateutils.address, estor.address, 6, {from: proxyOwner});
-            await estor.authorize(proxy2.address);
+            const leptonStorage = await LeptonStorage.new();
+            leptonProxy = await DeviseLeptonProxy.new(leptonStorage.address, {from: proxyOwner});
+            await leptonProxy.upgradeTo((await DeviseLeptonImpl.new()).address);
+            await rental.setLeptonProxy(leptonProxy.address, {from: proxyOwner});
+            leptonImpl = DeviseLeptonImpl.at(leptonProxy.address);
+            await leptonImpl.authorize(proxy.address, {from: proxyOwner});
+            await leptonStorage.authorize(leptonProxy.address);
+            await rental.setAccountingContract(accountingProxy.address, {from: proxyOwner});
+            await rental.setAccessControlContract(accessControlProxy.address, {from: proxyOwner});
+            await accessControl.authorize(proxy.address);
+            await rental.addMasterNode(pitai, {from: proxyOwner});
+            await rental.addLepton(leptons[0], '', 3, {from: pitai});
+            await rental.addLepton(leptons[1], leptons[0], 2, {from: pitai});
+            await rental.addLepton(leptons[2], leptons[1], 1, {from: pitai});
+            const proxy2 = await DeviseRentalProxy.new(token.address, {from: proxyOwner});
+            await auction.authorize(proxy2.address);
+            await accounting.authorize(proxy2.address);
             assert(proxy.address !== proxy2.address);
             await proxy2.upgradeTo(impl_v0.address, {from: proxyOwner});
             const rental2 = Rental_V0.at(proxy2.address);
-            assert.equal((await rental_v0.getTotalIncrementalUsefulness()).toNumber(), 6);
-            assert.equal((await rental2.getTotalIncrementalUsefulness()).toNumber(), 6);
-            assert.deepEqual(await rental2.getAllLeptons.call(), await rental_v0.getAllLeptons.call());
+            rental2.setLeptonProxy(leptonProxy.address, {from: proxyOwner});
+            await leptonImpl.authorize(proxy2.address, {from: proxyOwner});
+            await rental2.setAccountingContract(accountingProxy.address, {from: proxyOwner});
+            await rental2.setAccessControlContract(accessControlProxy.address, {from: proxyOwner});
+            assert.equal((await rental.getTotalIncrementalUsefulness.call()).toNumber(), 6);
+            assert.equal((await rental2.getTotalIncrementalUsefulness.call()).toNumber(), 6);
+            assert.deepEqual(await rental2.getAllLeptons.call(), await rental.getAllLeptons.call());
         });
     });
 
@@ -132,16 +152,28 @@ contract('DeviseRentalUpgradability', (accounts) => {
             describe('when the sender is the proxy owner', function () {
                 it('calls the implementation using the given data as msg.data', async function () {
                     await proxy.upgradeTo(impl_v0.address, {from: proxyOwner});
+                    const leptonStorage = await LeptonStorage.new();
+                    leptonProxy = await DeviseLeptonProxy.new(leptonStorage.address, {from: proxyOwner});
+                    await leptonProxy.upgradeTo((await DeviseLeptonImpl.new()).address);
+                    await rental.setLeptonProxy(leptonProxy.address, {from: proxyOwner});
+                    leptonImpl = DeviseLeptonImpl.at(leptonProxy.address);
+                    await leptonImpl.authorize(proxy.address, {from: proxyOwner});
+                    await leptonStorage.authorize(leptonProxy.address);
 
-                    const owner = await rental_v0.owner.call();
+                    const owner = await rental.owner.call();
                     assert.equal(owner, proxyOwner);
 
                     const client = accounts[2];
-                    await transferTokens(token, rental_v0, tokenWallet, client, 0.0005);
-                    await token.approve(rental_v0.address, 1000000, {from: client});
-                    await rental_v0.setEscrowWallet(pitaiWallet, {from: proxyOwner});
-                    await rental_v0.provision(1000000, {from: client});
-                    const bal = await rental_v0.getAllowance.call({from: client});
+                    await transferTokens(token, rental, tokenWallet, client, 0.0005);
+                    await token.approve(accountingProxy.address, 1000000, {from: client});
+                    await accounting.authorize(proxy.address);
+                    await accessControl.authorize(proxy.address);
+                    await rental.setAccountingContract(accountingProxy.address, {from: proxyOwner});
+                    await rental.setAccessControlContract(accessControlProxy.address, {from: proxyOwner});
+                    const curWallet = await rental.escrowWallet.call();
+                    await rental.setEscrowWallet(escrowWallet, {from: proxyOwner});
+                    await rental.provision(1000000, {from: client});
+                    const bal = await rental.getAllowance.call({from: client});
                     assert.equal(bal.toNumber(), 1000000);
                 });
 
@@ -166,25 +198,53 @@ contract('DeviseRentalUpgradability', (accounts) => {
                     });
                 });
 
-                it("Cannot override state variables with new same type variable in upgrades", async () => {
+                it("Cannot override method modifier in upgrades", async () => {
                     const DeviseRental_v3 = artifacts.require("./test/DeviseRentalImplV3");
-                    await proxy.upgradeTo((await DeviseRental_v3.new({from: accounts[0]})).address, {from: accounts[0]});
+                    await proxy.upgradeTo((await DeviseRental_v3.new({from: proxyOwner})).address, {from: proxyOwner});
+                    const leptonStorage = await LeptonStorage.new();
+                    leptonProxy = await DeviseLeptonProxy.new(leptonStorage.address, {from: proxyOwner});
+                    await leptonProxy.upgradeTo((await DeviseLeptonImpl.new()).address);
                     const rental_v3 = DeviseRental_v3.at(proxy.address);
-                    const seats = (await rental_v3.getSeatsAvailable.call({from: accounts[2]})).toNumber();
-                    assert.equal(seats, 100);
-                    const seats2 = (await rental_v3.getSeatsAvailable.call({from: accounts[2]})).toNumber();
-                    assert.equal(seats2, 100);
+                    await rental_v3.setLeptonProxy(leptonProxy.address, {from: proxyOwner});
+                    leptonImpl = DeviseLeptonImpl.at(leptonProxy.address);
+                    await leptonImpl.authorize(proxy.address, {from: proxyOwner});
+                    await leptonStorage.authorize(leptonProxy.address);
+
+                    await rental_v3.setAccountingContract(accountingProxy.address, {from: proxyOwner});
+                    await rental_v3.setAccessControlContract(accessControlProxy.address, {from: proxyOwner});
+                    await accessControl.authorize(proxy.address);
+                    await rental_v3.setEscrowWallet(escrowWallet, {from: proxyOwner});
+                    // new method to set the master node for the new modifier
+                    await rental_v3.setMasterNode(pitai);
+                    // Call our custom addLepton method which uses a different modifier
+                    await rental_v3.addLepton(leptons[0], '', 3, {from: pitai});
+                    await rental_v3.addLepton(leptons[1], leptons[0], 2, {from: pitai});
+                    await rental_v3.addLepton(leptons[2], leptons[1], 1, {from: pitai});
+                    const tiu = (await rental_v3.getTotalIncrementalUsefulness.call({from: accounts[2]})).toNumber();
+                    assert.equal(tiu, 6);
                 });
 
                 it("Retains the same information after upgrade", async () => {
-                    const client = accounts[2];
+                    const client = accounts[5];
                     await proxy.upgradeTo(impl_v0.address, {from: proxyOwner});
-                    await transferTokens(token, rental_v0, tokenWallet, client, 0.0005);
-                    await token.approve(rental_v0.address, 1000000, {from: client});
-                    await rental_v0.setEscrowWallet(pitaiWallet, {from: proxyOwner});
-                    await rental_v0.provision(10000, {from: client});
-                    await rental_v0.withdraw(5000, {from: client});
-                    const bal = await rental_v0.getAllowance.call({from: client});
+                    const leptonStorage = await LeptonStorage.new();
+                    leptonProxy = await DeviseLeptonProxy.new(leptonStorage.address, {from: proxyOwner});
+                    await leptonProxy.upgradeTo((await DeviseLeptonImpl.new()).address);
+                    await rental.setLeptonProxy(leptonProxy.address, {from: proxyOwner});
+                    leptonImpl = DeviseLeptonImpl.at(leptonProxy.address);
+                    await leptonImpl.authorize(proxy.address, {from: proxyOwner});
+                    await leptonStorage.authorize(leptonProxy.address);
+                    await transferTokens(token, rental, tokenWallet, client, 0.0005);
+                    await token.approve(accountingProxy.address, 1000000, {from: client});
+                    await rental.setAccountingContract(accountingProxy.address, {from: proxyOwner});
+                    await rental.setAccessControlContract(accessControlProxy.address, {from: proxyOwner});
+                    await accessControl.authorize(proxy.address);
+
+                    await rental.setEscrowWallet(escrowWallet, {from: proxyOwner});
+                    await rental.provision(10000, {from: client});
+                    await token.approve(accountingProxy.address, 10000, {from: escrowWallet});
+                    await rental.withdraw(5000, {from: client});
+                    const bal = await rental.getAllowance.call({from: client});
                     assert.equal(bal, 5000);
 
                     const DeviseRental_v2 = artifacts.require("./DeviseRentalImplV2");

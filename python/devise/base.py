@@ -436,6 +436,10 @@ class BaseDeviseClient(BaseEthereumClient):
         self._rental_proxy_contract = self.w3.eth.contract(address=contract_addresses.get('DEVISE_RENTAL'),
                                                            abi=get_contract_abi('DeviseRentalProxy'))
 
+        # The Audit Contract
+        audit_abi = get_contract_abi('AuditImpl')
+        self._audit_contract = self.w3.eth.contract(address=contract_addresses.get('AUDIT'), abi=audit_abi)
+
         if self._token_contract.address is None or self._rental_contract.address is None:
             raise RuntimeError(
                 "\n\n"

@@ -11,7 +11,7 @@ contract DeviseRentalImplTimeTravel is DeviseRentalImpl {
         timeTravel = _timeTravel;
     }
 
-    function getCurrentDate() internal returns (uint _year, uint _month, uint _day) {
+    function _getCurrentDate() internal returns (uint _year, uint _month, uint _day) {
         uint tt = timeTravel.currentTimeStamp();
         uint _timestamp = tt > block.timestamp ? tt : block.timestamp;
         uint year = dateUtils.getYear(_timestamp);

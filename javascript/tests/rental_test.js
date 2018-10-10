@@ -109,8 +109,8 @@ describe('RentalContractTest', function () {
         //     value: web3.utils.toWei('5', 'ether'),
         //     gas: gas
         // });
-        const rental = contract._rental_contract._address;
-        await contract._token_contract.methods.approve(rental, dvz).send({from: client, gas: gas});
+        const accounting_address = await contract._rental_contract.methods.accounting().call();
+        await contract._token_contract.methods.approve(accounting_address, dvz).send({from: client, gas: gas});
         const tx = await contract._rental_contract.methods.provision(dvz).send({from: client, gas: gas});
         const summary = await contract.get_client_summary(client);
         assert.equal(summary['beneficiary'], client);
@@ -139,8 +139,8 @@ describe('RentalContractTest', function () {
         const client = accounts[6];
         const escrow = accounts[3];
         const escrow_cap = 10 ** 9 * TOKEN_PRECISION;
-        const rental = contract._rental_contract._address;
-        await contract._token_contract.methods.approve(rental, escrow_cap).send({from: escrow, gas: gas});
+        const accounting_address = await contract._rental_contract.methods.accounting().call();
+        await contract._token_contract.methods.approve(accounting_address, escrow_cap).send({from: escrow, gas: gas});
         await contract._rental_contract.methods.leaseAll(1000 * TOKEN_PRECISION, 1).send({from: client, gas: gas});
         const bidders = await contract.get_all_bidders();
         assert.isAtLeast(bidders.length, 1);

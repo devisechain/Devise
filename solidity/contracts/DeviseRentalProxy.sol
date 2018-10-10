@@ -2,10 +2,10 @@ pragma solidity ^0.4.19;
 
 import "./Proxy.sol";
 import "./DateTime.sol";
-import "./DeviseRentalStorage.sol";
 import "./DeviseToken.sol";
-import "./DeviseEternalStorage.sol";
+import "./AccessControlStorage.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "./DeviseRentalStorage.sol";
 
 
 contract DeviseRentalProxy is Proxy, DeviseRentalStorage {
@@ -35,19 +35,9 @@ contract DeviseRentalProxy is Proxy, DeviseRentalStorage {
 
     /// @notice Contract constructor
     /// @param _token The token contract to be accepted to pay for lease dues
-    /// @param _dateUtils A valid DateTime contract for date manipulation
-    /// @param _permData A DeviseEternalStorage contract
-    /// @param _totalIncrementalUsefulness The total incremental usefulness for the leptons in DeviseEternalStorage
-    function DeviseRentalProxy(DeviseToken _token, DateTime _dateUtils, DeviseEternalStorage _permData, uint _totalIncrementalUsefulness) public {
+    function DeviseRentalProxy(DeviseToken _token) public {
         owner = msg.sender;
         token = _token;
-        dateUtils = _dateUtils;
-        permData = _permData;
-        priceCurrentTerm.pricePerBitOfIU = minimumPricePerBit;
-        priceNextTerm.pricePerBitOfIU = minimumPricePerBit;
-        seatsAvailable = totalSeats;
-        totalIncrementalUsefulness = _totalIncrementalUsefulness;
-        priceNextTerm.totalIncrementalUsefulness = _totalIncrementalUsefulness;
     }
 
     /**
@@ -107,7 +97,7 @@ contract DeviseRentalProxy is Proxy, DeviseRentalStorage {
 
     /// @notice
     /// @param
-    function setDataContract(DeviseEternalStorage _add) public onlyOwner {
+    function setDataContract(AccessControlStorage _add) public onlyOwner {
         address _impl = implementation();
         require(_impl != address(0));
 

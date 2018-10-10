@@ -35,7 +35,8 @@ solidity_compile: unlock_test_owner
 	cat build/contracts/DeviseToken.json | jq -r '.abi' > ../config/abi/devise_token.json && \
 	cat build/contracts/DeviseRentalProxy.json | jq -r '.abi' > ../python/Devise/abi/DeviseRentalProxy.json && \
 	cat build/contracts/DeviseRentalImpl.json | jq -r '.abi' > ../python/Devise/abi/DeviseRentalImpl.json && \
-	cat build/contracts/DeviseToken.json | jq -r '.abi' > ../python/Devise/abi/DeviseToken.json
+	cat build/contracts/DeviseToken.json | jq -r '.abi' > ../python/Devise/abi/DeviseToken.json && \
+	cat build/contracts/AuditImpl.json | jq -r '.abi' > ../python/Devise/abi/AuditImpl.json
 
 
 solidity_migrate: unlock_test_owner unlock_test_accounts

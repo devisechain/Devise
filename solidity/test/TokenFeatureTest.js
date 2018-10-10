@@ -1,37 +1,21 @@
 const DeviseToken = artifacts.require("./DeviseToken");
-const DateTime = artifacts.require("./DateTime");
-const DeviseEternalStorage = artifacts.require("./DeviseEternalStorage");
-const DeviseRentalBase = artifacts.require("./DeviseRentalProxy");
-const DeviseRental_v1 = artifacts.require("./DeviseRentalImpl");
+const setupFixturesHelper = require('./helpers/setupFixtures');
 const assertRevert = require('./helpers/assertRevert');
 const {transferTokens} = require('./test-utils');
 
 let token;
-let proxy;
 let rental;
 const pitai = web3.eth.accounts[0];
 const tokenWallet = web3.eth.accounts[1];
 const escrowWallet = web3.eth.accounts[2];
+const revenueWallet = web3.eth.accounts[3];
 
 contract("Token Features Tests", () => {
     before(async () => {
-        // test case 1: DeviseToken contract deployed
-        const cap = 10 * 10 ** 9 * 10 ** 6;
-        token = await DeviseToken.new(cap, {from: pitai});
-
-        const dateTime = await DateTime.deployed();
-        const estor = await DeviseEternalStorage.new();
-        // Create new upgradeable contract frontend (proxy)
-        proxy = await DeviseRentalBase.new(token.address, dateTime.address, estor.address, 0, {from: pitai});
-        // Set it's implementation version
-        await proxy.upgradeTo((await DeviseRental_v1.new()).address);
-        rental = DeviseRental_v1.at(proxy.address);
-
-        assert.notEqual(token.address, 0x0, "DeviseToken contract address should not be NULL.");
-        assert.notEqual(token.address, 0x0, "DeviseToken contract address should not be NULL.");
-        // mint 1 billion tokens for token sale
-        const saleAmount = 1 * 10 ** 9 * 10 ** 6;
-        await token.mint(tokenWallet, saleAmount);
+        ({
+            rental,
+            token
+        } = await setupFixturesHelper(pitai, escrowWallet, tokenWallet, revenueWallet, null, true, true));
     });
 
     describe("Test the burnable feature", () => {

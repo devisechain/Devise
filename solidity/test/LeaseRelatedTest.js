@@ -1,11 +1,7 @@
 (function () {
-    const DeviseToken = artifacts.require("./DeviseToken");
-    const DateTime = artifacts.require("./DateTime");
-    const DeviseEternalStorage = artifacts.require("./DeviseEternalStorage");
-    const DeviseRentalProxy = artifacts.require("./DeviseRentalProxy");
-    const DeviseRentalImpl = artifacts.require("./DeviseRentalImpl");
+    const setupFixturesHelper = require('./helpers/setupFixtures');
     const leptons = require('./leptons');
-    const {timeTravel, evmSnapshot, evmRevert, transferTokens, timestampToDate} = require('./test-utils');
+    const {timeTravel, transferTokens, timestampToDate} = require('./test-utils');
     const moment = require('moment');
 
     const pitai = web3.eth.accounts[0];
@@ -14,7 +10,6 @@
     const escrowWallet = web3.eth.accounts[3];
     const revenueWallet = web3.eth.accounts[4];
     const clients = web3.eth.accounts.slice(4);
-    const cap = 10 * 10 ** 9 * 10 ** 6;
     const microDVZ = 10 ** 6;
     const millionDVZ = 10 ** 6;
     const IUDecimals = 10 ** 6;
@@ -39,28 +34,15 @@
 
     contract("Test inaugural lease term charges", () => {
         beforeEach(async () => {
-            token = await DeviseToken.new(cap, {from: pitai});
+            ({
+                rental: rentalProxy,
+                proxy,
+                token,
+                dateTime,
+                auctionProxy,
+                accountingProxy
+            } = await setupFixturesHelper(pitai, escrowWallet, tokenWallet, revenueWallet, null, true, false));
 
-            await token.transferOwnership(tokenOwner, {from: pitai});
-            // mint 1 billion tokens for token sale
-            const saleAmount = 1 * 10 ** 9 * 10 ** 6;
-            await token.mint(tokenWallet, saleAmount, {from: tokenOwner});
-
-            const dateutils = await DateTime.new({from: pitai});
-            const dstore = await DeviseEternalStorage.new({from: pitai});
-            const proxy = await DeviseRentalProxy.new(token.address, dateutils.address, dstore.address, 0, {from: pitai});
-
-            await dstore.authorize(proxy.address, {from: pitai});
-
-            const rentalImpl = await DeviseRentalImpl.new({from: pitai});
-
-            await proxy.upgradeTo(rentalImpl.address, {from: pitai});
-
-            // rentalProxy will have all the interfaces of DeviseRentalImpl contract
-            // future function calls are directly from rentalProxy
-            rentalProxy = await DeviseRentalImpl.at(proxy.address);
-            await rentalProxy.setEscrowWallet(escrowWallet);
-            await rentalProxy.setRevenueWallet(revenueWallet);
             await rentalProxy.addMasterNode(pitai);
         });
 
@@ -70,12 +52,12 @@
             // approve so to recognize revenue
             // 10 million tokens
             const rev_amount = 10 * millionDVZ * microDVZ;
-            await token.approve(rentalProxy.address, rev_amount, {from: escrowWallet});
+            await token.approve(accountingProxy.address, rev_amount, {from: escrowWallet});
             const ether_amount = 1000;
 
             await transferTokens(token, rentalProxy, tokenWallet, client, ether_amount);
             const dvz_amount = await token.balanceOf(client);
-            await token.approve(rentalProxy.address, dvz_amount, {from: client});
+            await token.approve(accountingProxy.address, dvz_amount, {from: client});
             await rentalProxy.provision(dvz_amount, {from: client});
 
             const before = (await rentalProxy.getAllowance({from: client})).toNumber();
@@ -85,7 +67,7 @@
             assert.isAbove(n, 0);
             const after = (await rentalProxy.getAllowance({from: client})).toNumber();
             assert.isAbove(before, after);
-            const iu = (await rentalProxy.totalIncrementalUsefulness.call()).toNumber() / IUDecimals;
+            const iu = (await rentalProxy.getTotalIncrementalUsefulness.call()).toNumber() / IUDecimals;
             const prc = (await rentalProxy.minimumPricePerBit.call()).toNumber();
             const currPrc = (await rentalProxy.getRentPerSeatCurrentTerm.call()).toNumber();
             assert.equal(currPrc, iu * prc);
@@ -104,7 +86,7 @@
                 // approve so to recognize revenue
                 // 10 million tokens
                 const rev_amount = 10 * millionDVZ * microDVZ;
-                await token.approve(rentalProxy.address, rev_amount, {from: escrowWallet});
+                await token.approve(accountingProxy.address, rev_amount, {from: escrowWallet});
 
                 // purchase a lot of tokens
                 const ether_amount = 3000;
@@ -114,10 +96,10 @@
             it("Should be charged for the minimum if the client can afford it", async () => {
                 // provision a small amount of tokens
                 let dvz_amount = 841 * 10 ** 3 * microDVZ;
-                await token.approve(rentalProxy.address, dvz_amount, {from: client});
+                await token.approve(accountingProxy.address, dvz_amount, {from: client});
                 await rentalProxy.provision(dvz_amount, {from: client});
 
-                const iu = (await rentalProxy.totalIncrementalUsefulness.call()).toNumber() / IUDecimals;
+                const iu = (await rentalProxy.getTotalIncrementalUsefulness.call()).toNumber() / IUDecimals;
                 const bal0 = (await rentalProxy.getAllowance.call({from: client})).toNumber();
                 const seats = 10;
                 const prc_per_bit = 5000 * microDVZ;
@@ -133,10 +115,10 @@
             it("Should remain in the renter's list as long as the client can afford", async () => {
                 // provision a small amount of tokens
                 let dvz_amount = 841 * 10 ** 3 * microDVZ;
-                await token.approve(rentalProxy.address, dvz_amount, {from: client});
+                await token.approve(accountingProxy.address, dvz_amount, {from: client});
                 await rentalProxy.provision(dvz_amount, {from: client});
 
-                const iu = (await rentalProxy.totalIncrementalUsefulness.call()).toNumber() / IUDecimals;
+                const iu = (await rentalProxy.getTotalIncrementalUsefulness.call()).toNumber() / IUDecimals;
                 const bal0 = (await rentalProxy.getAllowance.call({from: client})).toNumber();
                 const seats = 10;
                 const prc_per_bit = 5000 * microDVZ;
@@ -151,7 +133,7 @@
                 await timeTravel(86400 * 31);
                 // provision a lot more tokens
                 dvz_amount = 10 * millionDVZ * microDVZ;
-                await token.approve(rentalProxy.address, dvz_amount, {from: client});
+                await token.approve(accountingProxy.address, dvz_amount, {from: client});
                 await rentalProxy.provision(dvz_amount, {from: client});
                 await rentalProxy.leaseAll(prc_per_bit, seats, {from: client});
                 charge = await getProratedDues(seats, iu, 10 ** 3 * microDVZ);
@@ -163,10 +145,10 @@
             it("Should activate the client's bid if his allowance can afford", async () => {
                 // provision a small amount of tokens
                 let dvz_amount = 841 * 10 ** 3 * microDVZ;
-                await token.approve(rentalProxy.address, dvz_amount, {from: client});
+                await token.approve(accountingProxy.address, dvz_amount, {from: client});
                 await rentalProxy.provision(dvz_amount, {from: client});
 
-                const iu = (await rentalProxy.totalIncrementalUsefulness.call()).toNumber() / IUDecimals;
+                const iu = (await rentalProxy.getTotalIncrementalUsefulness.call()).toNumber() / IUDecimals;
                 const bal0 = (await rentalProxy.getAllowance.call({from: client})).toNumber();
                 const seats = 10;
                 const prc_per_bit = 5000 * microDVZ;
@@ -181,7 +163,7 @@
                 await timeTravel(86400 * 31);
                 // provision a lot more tokens
                 dvz_amount = 10 * millionDVZ * microDVZ;
-                await token.approve(rentalProxy.address, dvz_amount, {from: client});
+                await token.approve(accountingProxy.address, dvz_amount, {from: client});
                 await rentalProxy.provision(dvz_amount, {from: client});
                 await rentalProxy.leaseAll(prc_per_bit, seats, {from: client});
                 charge = await getProratedDues(seats, iu, 10 ** 3 * microDVZ);
@@ -224,7 +206,7 @@
 
             it("Should be able to check price per bit after leaseAll() calls", async () => {
                 let dvz_amount = 10841 * 10 ** 3 * microDVZ;
-                await token.approve(rentalProxy.address, dvz_amount, {from: client});
+                await token.approve(accountingProxy.address, dvz_amount, {from: client});
                 await rentalProxy.provision(dvz_amount, {from: client});
                 const seats = 10;
                 const prcTokens = 5000;

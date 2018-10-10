@@ -186,10 +186,10 @@ class TestDeviseClient(object):
         client.apply_for_power_user()
         assert client.is_power_user
 
-    def total_incremental_usefulness(self, client, master_node):
+    def test_total_incremental_usefulness(self, client, master_node):
         assert client.total_incremental_usefulness == 0
         lepton_hash = hashlib.sha1('hello world 1'.encode('utf8')).hexdigest()
-        master_node.add_lepton(lepton_hash, 1.5123456789123456789)
+        master_node.add_lepton(lepton_hash, None, 1.5123456789123456789)
         assert client.total_incremental_usefulness == 1.512345
 
     def test_get_all_leptons(self, master_node, client):
@@ -487,16 +487,6 @@ class TestDeviseClient(object):
     def test_get_all_events(self, client, owner_client, rate_setter):
         owner_client.add_rate_setter(rate_setter.address)
         block_number = rate_setter.w3.eth.getBlock('latest')['number']
-        rate_setter.log_file_created(hashlib.sha1('Hello World'.encode('utf-8')).hexdigest())
-        events = client.get_events('FileCreated')
-        assert events == [{
-            'event': 'FileCreated',
-            'event_args': {'contentHash': '0a4d55a8d778e5022fab701977c5d840bbc486d0'},
-            'block_number': block_number + 1,
-            'block_timestamp': rate_setter.w3.eth.getBlock(block_number + 1)['timestamp'],
-            'block_datetime': datetime.utcfromtimestamp(rate_setter.w3.eth.getBlock(block_number + 1)['timestamp']),
-            'transaction': events[0]['transaction']
-        }]
 
         client.designate_beneficiary('0x73fCe79Bb6341e82E45cF58AAB680F6Af7019342')
         events = client.get_events('BeneficiaryChanged')
@@ -506,9 +496,9 @@ class TestDeviseClient(object):
                 'client_address': client.address,
                 'beneficiary_address': '0x73fCe79Bb6341e82E45cF58AAB680F6Af7019342'
             },
-            'block_number': block_number + 2,
-            'block_timestamp': rate_setter.w3.eth.getBlock(block_number + 2)['timestamp'],
-            'block_datetime': datetime.utcfromtimestamp(rate_setter.w3.eth.getBlock(block_number + 2)['timestamp']),
+            'block_number': block_number + 1,
+            'block_timestamp': client.w3.eth.getBlock(block_number + 1)['timestamp'],
+            'block_datetime': datetime.utcfromtimestamp(client.w3.eth.getBlock(block_number + 1)['timestamp']),
             'transaction': events[0]['transaction']
         }]
 
@@ -519,4 +509,3 @@ class TestDeviseClient(object):
         assert 'FileCreated' in events
         assert 'LeptonAdded' in events
         assert 'BeneficiaryChanged' in events
-

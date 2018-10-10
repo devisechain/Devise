@@ -26,8 +26,8 @@ describe('DeviseTokenTests', function () {
     });
     it('Allowance should be non-zero for specific accounts', async () => {
         const owner = await token._rental_contract.methods.escrowWallet().call();
-        const spender = token._rental_contract._address;
-        const allowance = await token.allowance(owner, spender);
+        const accounting_address = await token._rental_contract.methods.accounting().call();
+        const allowance = await token.allowance(owner, accounting_address);
         assert.isAtLeast(allowance, 3000);
     });
     it('Balance should be zero for random account', async () => {
